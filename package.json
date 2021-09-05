@@ -1,0 +1,8 @@
+{
+  "name": "wp-react-experimental",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:ed-digital/wp-react-experimental.git",
+  "author": "Daniel Lever <daniel@ed.com.au>",
+  "license": "MIT"
+}
