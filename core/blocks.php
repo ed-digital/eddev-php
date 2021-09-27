@@ -260,7 +260,7 @@
       // die();
       BlockQLRoot::setContext($attributes);
       $result = graphql([
-        'query' => $contents,
+        'query' => $contents . FragmentLoader::getAll(),
         'variables' => $params
       ]);
 

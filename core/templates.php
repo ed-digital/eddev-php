@@ -160,7 +160,7 @@
       if (file_exists($templateQueryFile)) {
         $query = file_get_contents($templateQueryFile);
         $result = graphql([
-          "query" => $query,
+          "query" => $query . FragmentLoader::getAll(),
           "variables" => $params
         ]);
         $data = $result;
