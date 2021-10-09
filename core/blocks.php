@@ -254,6 +254,7 @@
         // No .graphql file exists, therefore no props
         return [];
       }
+      ErrorCollector::push("block_".$meta['id'], sprintf("running block query file '%s'", str_replace($queryFile, ED()->themePath, "")));
       $contents = file_get_contents($queryFile);
       $params = EDTemplates::getQueryParams();
       // dump($attributes);
@@ -265,6 +266,10 @@
       ]);
 
       if ($result['errors']) {
+        foreach ($result['errors'] as $err) {
+          ErrorCollector::logError($err['message']);
+        }
+        ErrorCollector::pop();
         return ["errors" => $result['errors']];
       }
       
@@ -285,6 +290,7 @@
           $props['data'][$key] = $value;
         }
       }
+      ErrorCollector::pop();
       return $props;
       // dump($result);
       // dump($contents, $params);
@@ -303,6 +309,16 @@
       if (strpos($block['blockName'], "acf/") === 0) {
         // ACF blocks should have their 
         $meta = EDBlocks::$blocks[$block['blockName']];
+        // $attrs = [
+        //   'id' => $block['attrs']['id'],
+        //   'data' => []
+        // ];
+        // foreach ($block['attrs']['data'] as $key => $val) {
+        //   if (strpos($key, "_") === 0) {
+        //     $attrs['data'][$val] = $block['attrs']['data'][substr($key, 1)];
+        //     $attrs['data'][$key] = $val;
+        //   }
+        // }
         $block['props'] = $this->runBlockQuery($meta, $block['attrs']);
         $block['inline'] = $block['attrs']['inline'];
         $block['rule'] = 'react';

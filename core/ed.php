@@ -47,6 +47,13 @@
         return $url;
       }, 100, 3);
 
+      // Allow unused fragments
+      add_filter('graphql_validation_rules', function($rules) {
+        return array_filter($rules, function($rule) {
+          return ($rule instanceof GraphQL\Validator\Rules\NoUnusedFragments) == false;
+        });
+      }, 1, 1);
+
       EDTemplates::init();
       EDBlocks::init();
 

@@ -91,6 +91,8 @@
           $_content = "";
 
           $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
+
+          ErrorCollector::push('template', sprintf("running template '%s'", $template));
           
           // Fetch the data
           $data = [
@@ -127,6 +129,8 @@
               $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
             }
           }
+
+          $data['errorStack'] = ErrorCollector::pop();
           
           if (ED()->isPropsRequest()) {
             header('Content-type: text/json');
@@ -158,13 +162,21 @@
       // Does a .graphql file exist?
       $templateQueryFile = preg_replace("/\.(tsx|jsx|js|ts|php)$/i", ".graphql", $template);
       if (file_exists($templateQueryFile)) {
+        ErrorCollector::push("view", sprintf("running view query file '%s'", str_replace(ED()->themePath, "", $templateQueryFile)));
         $query = file_get_contents($templateQueryFile);
         $result = graphql([
           "query" => $query . FragmentLoader::getAll(),
           "variables" => $params
         ]);
+        if ($result['errors']) {
+          foreach ($result['errors'] as $err) {
+            ErrorCollector::logError($err['message']);
+          }
+        }
+        ErrorCollector::pop();
         $data = $result;
       }
+
 
       return $data;
     }
@@ -175,11 +187,18 @@
       $data = null;
 
       if (file_exists($queryFile)) {
+        ErrorCollector::push("view", sprintf("running app query file '%s'", str_replace(ED()->themePath, "", $queryFile)));
         $query = file_get_contents($queryFile);
         $result = graphql([
           "query" => $query,
           "variables" => $params
         ]);
+        if ($result['errors']) {
+          foreach ($result['errors'] as $err) {
+            ErrorCollector::logError($err['message']);
+          }
+        }
+        ErrorCollector::pop();
         $data = $result;
       }
 
