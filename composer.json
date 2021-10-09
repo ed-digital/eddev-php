@@ -1,5 +1,5 @@
 {
-  "name": "ed-digital/wp-react-experimental",
+  "name": "ed-digital/eddev-php",
   "description": "Composer package for ED.'s WordPress-React Sites",
   "version": "1.0.0",
   "autoload": {
