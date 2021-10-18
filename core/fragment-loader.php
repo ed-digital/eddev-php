@@ -15,3 +15,7 @@
     }
 
   }
+
+  add_filter('graphiql_external_fragments', function() {
+    return [FragmentLoader::getAll()];
+  });

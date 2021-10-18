@@ -6,6 +6,7 @@
   class EDBlocks {
 
     static $blocks;
+    static $coreBlockTags = [];
 
     static function init() {
       // Initial load of blocks
@@ -13,6 +14,55 @@
 
       $config = new BlockQL();
       add_action('graphql_register_types', [$config, 'init'], 10, 1);
+
+      add_action('admin_init', function() {
+        wp_add_inline_script('wp-block-editor', "window.ED_BLOCK_TAGS = " . json_encode(self::$coreBlockTags), 'after');
+      });
+
+      // add_action('block_editor_settings_all', function($settings) {
+      //   $settings['blockTags'] = self::$coreBlockTags;
+      //   // $blocks = WP_Block_Type_Registry::get_instance()->get_all_registered();
+        
+      //   // foreach ($blocks as $block) {
+      //   //   if (self::$coreBlockTags[$block->name]) {
+      //   //     $block->tags = self::$coreBlockTags[$block->name];
+      //   //   }
+      //   // }
+
+      //   return $settings;
+      // });
+
+      add_filter('allowed_block_types_all', function($types, $post) {
+        // // Get the current template, if one exists.
+        $templateName = @get_page_template_slug($_GET['post']);
+        if (!$templateName) $templateName = "default";
+    
+        // // Get all block types declared to ACF
+        $blockTypes = acf_get_block_types();
+        $allowedBlocks = array_keys(self::$coreBlockTags);
+    
+        foreach ($blockTypes as $name => $def) {
+          if (is_callable(@$def['test'])) {
+            if (!$def['test']($post, $templateName)) {
+              continue;
+            }
+          } else {
+            if ($post->post_type === 'page') {
+              if (@is_array($def['templates']) && @!in_array($templateName, $def['templates'])) {
+                // Don't allow this block, since the current template is not on the whitelist
+                continue;
+              }
+            }
+            if (is_array($def['post_types']) && count($def['post_types']) && @!in_array($post->post_type, $def['post_types'])) {
+              // Don't allow this block, since the current post type is not on the whitelist
+              continue;
+            }
+          }
+          $allowedBlocks[] = $name;
+        }
+    
+        return $allowedBlocks;
+      }, 2, 3);
     }
 
     static function loadBlocks() {
@@ -26,6 +76,12 @@
         self::$blocks['acf/'.$meta['name']] = $meta;
       }
 
+    }
+
+    static function tagCoreBlocks($tag, $blocks) {
+      foreach ($blocks as $block) {
+        self::$coreBlockTags[$block][] = $tag;
+      }
     }
 
     // This function is used for block previews only
@@ -96,6 +152,8 @@
         'align' => $comment['align'],
         'align_text' => $comment['align text'],
         'align_content' => $comment['align content'],
+        // 'parent' => preg_split("/[,\s]+/", $comment['parent']),
+        'tags' => preg_split("/[,\s]+/", $comment['tags']),
         'supports' => [
           "align" => self::parseBoolOrString($comment['supports align'], false),
           "align_text" => self::parseBoolOrString($comment['supports align text'], false),
@@ -374,7 +432,7 @@
     public function __construct() {
       $this->id = self::$context['id'];
       acf_setup_meta(
-        self::$context['data'],
+        self::$context['data'] ?? [],
         self::$context['id'],
         false
       );

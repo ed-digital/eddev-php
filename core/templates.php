@@ -36,12 +36,13 @@
       // Locate templates as view/TEMPLATE.tsx files, rather than TEMPLATE.php files
       foreach ($viewTypes as $type) {
         add_filter("{$type}_template_hierarchy", function($templates) {
-          return array_merge(
+          $result = array_merge(
             array_map(function($template) {
-              return "views/" . str_replace(".php", ".tsx", $template);
+              return "views/" . str_replace("views/", "", str_replace(".php", ".tsx", $template));
             }, $templates),
             $templates
           );
+          return $result;
         });
       }
     }

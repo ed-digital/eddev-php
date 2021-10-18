@@ -72,6 +72,10 @@
       });
     }
 
+    function tagCoreBlocks($tag, $blocks) {
+      EDBlocks::tagCoreBlocks($tag, $blocks);
+    }
+
     function setConfig($config) {
       $this->config = array_merge($this->config, $config);
     }
