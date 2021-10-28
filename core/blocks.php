@@ -212,7 +212,8 @@
         'type' => ['non_null' => 'ContentBlocks'],
         'description' => "The current Gutenberg block in context.",
         'resolve' => function($root, $args, $context, $info) {
-          $result = $this->parseBlocks($root->contentRaw);
+          global $post;
+          $result = $this->parseBlocks($post->post_content);
           return $result;
         }
       ]);

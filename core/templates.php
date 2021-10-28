@@ -119,7 +119,7 @@
           $_styles = "";
 
           $_scripts .= "<script src=\"".ED()->themeURL."/dist/main.frontend.js\"></script>\n";
-          $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/main.css\">\n";
+          // $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/main.css\">\n";
 
           if ($templateBundle) {
             if (file_exists(ED()->themePath.$templateBundle)) {
@@ -127,7 +127,7 @@
             }
             $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
             if (file_exists(ED()->themePath.$cssFile)) {
-              $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
+              // $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
             }
           }
 
