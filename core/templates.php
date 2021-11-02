@@ -132,6 +132,9 @@
           }
 
           $data['errorStack'] = ErrorCollector::pop();
+          if (@count($data['errorStack']) == 0) {
+            unset($data['errorStack']);
+          }
           
           if (ED()->isPropsRequest()) {
             header('Content-type: text/json');
