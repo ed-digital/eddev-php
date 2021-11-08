@@ -66,6 +66,9 @@
     }
 
     static function loadBlocks() {
+      if (!function_exists("acf_register_block_type")) {
+        return;
+      }
       $files = glob(ED()->themePath."/blocks/**/*.tsx");
 
       foreach ($files as $file) {
@@ -154,6 +157,7 @@
         'align_content' => $comment['align content'],
         // 'parent' => preg_split("/[,\s]+/", $comment['parent']),
         'tags' => preg_split("/[,\s]+/", $comment['tags']),
+        'childTags' => preg_split("/[,\s]+/", $comment['child tags']),
         'supports' => [
           "align" => self::parseBoolOrString($comment['supports align'], false),
           "align_text" => self::parseBoolOrString($comment['supports align text'], false),
