@@ -142,8 +142,12 @@
         });
         $lines[] = $key."=".$value;
       }
+
+      $contents = implode("\n", $lines);
       
-      file_put_contents($file, implode("\n", $lines));
+      if (file_get_contents($file) !== $contents) {
+        file_put_contents($file, $contents);
+      }
     }
 
     function registerPostType($name, $args) {
@@ -161,5 +165,6 @@
       return new EDCore();
     }
   }
-
+  
 ?>
+
