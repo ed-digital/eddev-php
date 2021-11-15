@@ -104,7 +104,7 @@
           $data['appData'] = self::getDataForApp();
           if ($isJSX) {
             $dadta['viewType'] = 'react';
-            $templateBundle = "/dist/".preg_replace("/[^0-9A-Z]/i", "-", $cleanedTemplateName).".frontend.js";
+            $templateBundle = "/dist/frontend/".preg_replace("/[^0-9A-Z]/i", "-", $cleanedTemplateName).".frontend.js";
           } else {
             ob_start();
             include($template);
@@ -118,7 +118,7 @@
           $_scripts = "";
           $_styles = "";
 
-          $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/main.frontend.js")."\"></script>\n";
+          $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
           // $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/main.css\">\n";
 
           if ($templateBundle) {
