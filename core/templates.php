@@ -127,7 +127,7 @@
             }
             $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
             if (file_exists(ED()->themePath.$cssFile)) {
-              // $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
+              $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
             }
           }
 
