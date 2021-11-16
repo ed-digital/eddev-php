@@ -65,7 +65,7 @@
       add_filter('admin_init', function() {
         wp_enqueue_script(
           'theme_admin_js',
-          $this->themeURL.'/dist/main.admin.js',
+          $this->themeURL.'/dist/admin/main.admin.js',
           ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks'],
           ""
         );
