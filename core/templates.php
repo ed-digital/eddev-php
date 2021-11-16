@@ -119,7 +119,7 @@
           $_styles = "";
 
           $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
-          // $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/main.css\">\n";
+          $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
 
           if ($templateBundle) {
             if (file_exists(ED()->themePath.$templateBundle)) {
