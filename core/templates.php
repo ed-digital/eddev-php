@@ -118,16 +118,19 @@
           $_scripts = "";
           $_styles = "";
 
-          $_scripts .= "<script src=\"".ED()->themeURL."/dist/frontend/main.frontend.js\"></script>\n";
-          // $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/main.css\">\n";
+          $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
+
+          if (file_exists(ED()->themePath."/dist/frontend/main.css")) {
+            $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
+          }
 
           if ($templateBundle) {
             if (file_exists(ED()->themePath.$templateBundle)) {
-              $_scripts .= "<script src=\"" . ED()->themeURL . $templateBundle . "\"></script>\n";
+              $_scripts .= "<script src=\"" . self::appendFileVersion(ED()->themeURL . $templateBundle) . "\"></script>\n";
             }
             $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
             if (file_exists(ED()->themePath.$cssFile)) {
-              // $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
+              $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
             }
           }
 
@@ -147,6 +150,14 @@
         }
         exit;
       }, 1000, 1);
+    }
+
+    static function appendFileVersion($script) {
+      $file = str_replace(ED()->themeURL, ED()->themePath, $script);
+      if (file_exists($file)) {
+        $script .= "?v=".@filemtime($file);
+      }
+      return $script;
     }
 
     static function getQueryParams() {
