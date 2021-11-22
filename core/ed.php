@@ -110,21 +110,24 @@
         "extensions" => [
           "endpoints" => [
             "default" => [
-              "url" => "http://react-demo.local/graphql"
+              "url" => str_replace("https://", "http://", ED()->siteURL)."/graphql"
             ]
           ]
         ]
       ], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-      // 2 spaces instead of 4...
       $contents = preg_replace('/^(  +?)\\1(?=[^ ])/m', '$1', $contents);
-      file_put_contents(ED()->themePath."/.graphqlrc.json", $contents);
+      $file = ED()->themePath."/.graphqlrc.json";
+      if (file_get_contents($file) !== $contents) {
+        file_put_contents($file, $contents);
+      }
     }
     
     private function updateEnv() {
       $contents = '';
       $file = $this->themePath."/.env";
       if (file_exists($file)) {
-        $contents = file_get_contents($file);
+        $contents = @file_get_contents($file);
+        if (!$contents) $contents = '';
       }
 
       // Values to set
