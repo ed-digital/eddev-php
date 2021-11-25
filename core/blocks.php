@@ -22,13 +22,11 @@
       // add_action('block_editor_settings_all', function($settings) {
       //   $settings['blockTags'] = self::$coreBlockTags;
       //   // $blocks = WP_Block_Type_Registry::get_instance()->get_all_registered();
-        
       //   // foreach ($blocks as $block) {
       //   //   if (self::$coreBlockTags[$block->name]) {
       //   //     $block->tags = self::$coreBlockTags[$block->name];
       //   //   }
       //   // }
-
       //   return $settings;
       // });
 
@@ -191,7 +189,11 @@
       // Register the root block query
       register_graphql_object_type('CurrentBlock', [
         "description" => "The current Gutenberg block in context.",
-        "fields" => []
+        "fields" => [
+          'nothing' => [
+            'type' => 'Int'
+          ]
+        ]
       ]);
       register_graphql_field('RootQuery', 'block', [
         'type' => ['non_null' => 'CurrentBlock'],
@@ -216,8 +218,7 @@
         'type' => ['non_null' => 'ContentBlocks'],
         'description' => "The current Gutenberg block in context.",
         'resolve' => function($root, $args, $context, $info) {
-          global $post;
-          $result = $this->parseBlocks($post->post_content);
+          $result = $this->parseBlocks($root->contentRaw);
           return $result;
         }
       ]);
