@@ -215,9 +215,21 @@
     }
 
     static function getQueryParams() {
-      global $post;
+      $postID = get_queried_object_id();
+      if ($_GET['preview'] && $_GET['preview_id']) {
+        $revisions = wp_get_post_revisions(
+          $postID,
+          [
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'check_enabled'  => false,
+          ]
+        );
+        $postID = !empty($revisions) ? array_values($revisions)[0] : $postID;
+      }
       return [
-        'postId' => @get_queried_object()->ID ?? $post->ID ?? $_POST['post_id'] ?? $_GET['id']
+        'postId' => $postID ?? $_POST['post_id'] ?? $_GET['id'],
+        'preview' => $_GET['preview'] && $_GET['preview_id']
       ];
     }
 
