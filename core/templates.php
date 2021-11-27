@@ -86,6 +86,7 @@
     private static function hookViewResponder() {
       add_filter('template_include', function($template) {
         $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
+        $isPropsRequest = ED()->isPropsRequest();
         if (ED()->config['serverless']) {
           dump("SERVERLESS NOT READY", $template);
         } else {
@@ -97,11 +98,14 @@
           
           // Fetch the data
           $data = [
-            'view' => $cleanedTemplateName
+            'view' => $cleanedTemplateName,
+            'editLink' => current_user_can('edit_posts') ? get_edit_post_link() : null
           ];
           $templateBundle = "";
           $data['viewData'] = self::getDataForTemplate($template);
-          $data['appData'] = self::getDataForApp();
+          if (!$isPropsRequest || $_GET['_props'] === 'all') {
+            $data['appData'] = self::getDataForApp();
+          }
           if ($isJSX) {
             $dadta['viewType'] = 'react';
             $templateBundle = "/dist/frontend/".preg_replace("/[^0-9A-Z]/i", "-", $cleanedTemplateName).".frontend.js";
@@ -139,8 +143,9 @@
             unset($data['errorStack']);
           }
           
-          if (ED()->isPropsRequest()) {
+          if ($isPropsRequest) {
             header('Content-type: text/json');
+            $data['meta'] = self::getMeta();
             echo json_encode($data, JSON_PRETTY_PRINT);
             exit;
           } else {
@@ -158,6 +163,55 @@
         $script .= "?v=".@filemtime($file);
       }
       return $script;
+    }
+
+    static function getMeta() {
+      // Grab the head contents
+      ob_start();
+      wp_head();
+      $head = ob_get_contents();
+      ob_end_clean();
+
+      // Grab the foot contents
+      ob_start();
+      wp_footer();
+      $foot = ob_get_contents();
+      ob_end_clean();
+
+      return [
+        'head' => @self::parseHeaderHTML($head),
+        'footer' => @self::parseHeaderHTML($foot)
+      ];
+    }
+
+    static function parseHeaderHTML($html) {
+      $data = DOMDocument::loadHTML(
+        $html,
+        LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+      );
+
+      $output = [];
+
+      $tagNames = ['title', 'meta', 'link', 'script', 'style'];
+
+      // Grab all the tags
+      foreach ($tagNames as $tagName) {
+        $output[$tagName] = [];
+        $tags = @$data->getElementsByTagName($tagName);
+        foreach ($tags as $el) {
+          $attributes = [];
+          foreach ($el->attributes as $attr) {
+            $attributes[$attr->name] = $attr->value;
+          }
+          $inner = $el->nodeValue;
+          if ($inner !== '') {
+            $attributes['__code'] = $inner;
+          }
+          $output[$tagName][] = $attributes;
+        }
+      }
+      
+      return $output;
     }
 
     static function getQueryParams() {
