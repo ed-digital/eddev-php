@@ -99,7 +99,7 @@
           // Fetch the data
           $data = [
             'view' => $cleanedTemplateName,
-            'editLink' => current_user_can('edit_posts') ? get_edit_post_link() : null
+            'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
           ];
           $templateBundle = "";
           $data['viewData'] = self::getDataForTemplate($template);
