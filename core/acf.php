@@ -10,8 +10,6 @@
             $acf->setup_sync();
             $acf->check_sync();
             $acf->check_duplicate();
-            dump($acf->sync);
-            exit;
             foreach ($acf->sync as $sync) {
               if ($sync['ID'] == $_GET['post'])  {
                 add_action('admin_notices', function() use($acf) {
