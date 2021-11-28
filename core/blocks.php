@@ -30,10 +30,15 @@
       //   return $settings;
       // });
 
-      add_filter('allowed_block_types_all', function($types, $post) {
+      add_filter('allowed_block_types_all', function($types, $ctx) {
         // // Get the current template, if one exists.
+        $post = $ctx->post;
         $templateName = @get_page_template_slug($_GET['post']);
         if (!$templateName) $templateName = "default";
+
+        if ($templateName) {
+          $templateName = str_replace("views/", "", str_replace(".tsx", "", $templateName));
+        }
     
         // // Get all block types declared to ACF
         $blockTypes = acf_get_block_types();
@@ -50,10 +55,6 @@
                 // Don't allow this block, since the current template is not on the whitelist
                 continue;
               }
-            }
-            if (is_array($def['post_types']) && count($def['post_types']) && @!in_array($post->post_type, $def['post_types'])) {
-              // Don't allow this block, since the current post type is not on the whitelist
-              continue;
             }
           }
           $allowedBlocks[] = $name;
@@ -139,6 +140,11 @@
 
       // Convert into an acf_register_post_type compatible array
       $id = str_replace(ED()->themePath."/blocks/", "", str_replace(".tsx", "", $file));
+
+      $templates = $comment['templates'] ? preg_split("/[,\s]+/", $comment['templates']) : [];
+      if (count($templates) === 0) {
+        $templates = ['default'];
+      }
       return [
         'id' => $id,
         'name' => preg_replace("/[^a-z0-9-]+/i", "-", $comment['name']),
@@ -148,12 +154,12 @@
         'keywords' => $comment['keywords'],
         'category' => $comment['category'],
         'icon' => $comment['icon'],
-        'types' => preg_split("/[,\s]+/", $comment['types']),
+        'post_types' => preg_split("/[,\s]+/", $comment['types']),
         'mode' => $comment['mode'] ?? 'preview',
         'align' => $comment['align'],
         'align_text' => $comment['align text'],
         'align_content' => $comment['align content'],
-        // 'parent' => preg_split("/[,\s]+/", $comment['parent']),
+        'templates' => $templates,
         'tags' => preg_split("/[,\s]+/", $comment['tags']),
         'childTags' => preg_split("/[,\s]+/", $comment['child tags']),
         'supports' => [
