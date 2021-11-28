@@ -76,6 +76,10 @@
       EDBlocks::tagCoreBlocks($tag, $blocks);
     }
 
+    function templateLock($lock) {
+      EDBlocks::templateLock($lock);
+    }
+
     function setConfig($config) {
       $this->config = array_merge($this->config, $config);
     }
