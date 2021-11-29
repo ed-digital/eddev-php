@@ -234,6 +234,7 @@
           ]
         ]
       ]);
+      
       register_graphql_field('RootQuery', 'block', [
         'type' => ['non_null' => 'CurrentBlock'],
         'description' => "The current Gutenberg block in context.",
@@ -241,6 +242,7 @@
           return new BlockQLRoot();
         }
       ]);
+
       register_graphql_scalar("ContentBlocks", [
         "description" => "Content blocks in ED.'s standard content blocks format.",
         "serialize" => function($value) {
@@ -253,6 +255,7 @@
           return $value;
         }
       ]);
+
       register_graphql_field('ContentNode', 'contentBlocks', [
         'type' => ['non_null' => 'ContentBlocks'],
         'description' => "The current Gutenberg block in context.",
@@ -262,6 +265,7 @@
           return $result;
         }
       ]);
+
       add_filter('graphql_acf_get_root_id', function($id, $root) {
         if ($root instanceof BlockQLRoot) {
           return $root->id;
