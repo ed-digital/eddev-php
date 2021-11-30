@@ -383,7 +383,7 @@
       
       // Extract result data into props
       $props = [
-        'data' => []
+        
       ];
       foreach ($result['data'] as $key => $value) {
         if ($key === 'block') {
@@ -395,7 +395,7 @@
             $props = array_merge($props, $result);
           }
         } else {
-          $props['data'][$key] = $value;
+          $props[$key] = $value;
         }
       }
       ErrorCollector::pop();
