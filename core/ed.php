@@ -67,8 +67,12 @@
           'theme_admin_js',
           $this->themeURL.'/dist/admin/main.admin.js',
           ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks'],
-          ""
+          filemtime(ED()->themePath.$style)
         );
+        $style = "/dist/admin/main.css";
+        if (file_exists(ED()->themePath.$style)) {
+          wp_enqueue_style('theme_admin_css', ED()->themeURL.$style, [], filemtime(ED()->themePath.$style));
+        }
       });
     }
 
