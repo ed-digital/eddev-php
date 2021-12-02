@@ -128,10 +128,14 @@
             $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
           }
 
+          // Preload each template
+          $templates = glob(ED()->themePath."/dist/frontend/view*.js");
+          foreach ($templates as $template) {
+            $isCurrentTemplate = ED()->themePath.$templateBundle === $template;
+            $async = $isCurrentTemplate ? '' : 'async';
+            $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion(ED()->themeURL . $templateBundle) . "\"></script>\n";
+          }
           if ($templateBundle) {
-            if (file_exists(ED()->themePath.$templateBundle)) {
-              $_scripts .= "<script src=\"" . self::appendFileVersion(ED()->themeURL . $templateBundle) . "\"></script>\n";
-            }
             $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
             if (file_exists(ED()->themePath.$cssFile)) {
               $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
