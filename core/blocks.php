@@ -87,36 +87,36 @@
     }
 
     static function templateLock($lock) {
-      // if ($lock['type']) {
-      //   add_action('admin_init', function() use($lock) {
-      //     $postType = get_post_type_object($lock['type']);
-      //     $postType->template = $lock['content'];
-      //     $postType->template_lock = 'all';
-      //   });
-      // } else if ($lock['template']) {
+      if ($lock['type']) {
+        add_action('admin_init', function() use($lock) {
+          $postType = get_post_type_object($lock['type']);
+          $postType->template = $lock['content'];
+          $postType->template_lock = 'all';
+        });
+      } else if ($lock['template']) {
         
-      // }
-      add_filter('block_editor_settings', function($settings, $post) use($lock) {
-        // dump($post->post_type, $lock['template']);
-        if ($post->post_type === $lock['type']) {
-          $settings['template'] = $lock['content'];
-          $settings['template_lock'] = 'all';
-        } else if ($post->post_type === "page" && $lock['template']) {
-          // Disabled, because not really possible atm...
+      }
+      // add_filter('block_editor_settings', function($settings, $post) use($lock) {
+      //   // dump($post->post_type, $lock['template']);
+      //   if ($post->post_type === $lock['type']) {
+      //     $settings['template'] = $lock['content'];
+      //     $settings['template_lock'] = 'all';
+      //   } else if ($post->post_type === "page" && $lock['template']) {
+      //     // Disabled, because not really possible atm...
 
-          // $templateName = @get_page_template_slug($post->ID);
-          // if (!$templateName) $templateName = "default";
-          // if ($templateName) {
-          //   $templateName = str_replace("views/", "", str_replace(".tsx", "", $templateName));
-          // }
+      //     // $templateName = @get_page_template_slug($post->ID);
+      //     // if (!$templateName) $templateName = "default";
+      //     // if ($templateName) {
+      //     //   $templateName = str_replace("views/", "", str_replace(".tsx", "", $templateName));
+      //     // }
 
-          // if ($templateName === $lock['template']) {
-          //   $settings['template'] = $lock['content'];
-          //   $settings['template_lock'] = 'all';
-          // }
-        }
-        return $settings;
-      }, 10, 2);
+      //     // if ($templateName === $lock['template']) {
+      //     //   $settings['template'] = $lock['content'];
+      //     //   $settings['template_lock'] = 'all';
+      //     // }
+      //   }
+      //   return $settings;
+      // }, 10, 2);
     }
 
     // This function is used for block previews only

@@ -121,7 +121,8 @@
               "url" => str_replace("https://", "http://", ED()->siteURL)."/graphql"
             ]
           ]
-        ]
+        ],
+        "documents" => "queries/fragments/**/*.graphql"
       ], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
       $contents = preg_replace('/^(  +?)\\1(?=[^ ])/m', '$1', $contents);
       $file = ED()->themePath."/.graphqlrc.json";
