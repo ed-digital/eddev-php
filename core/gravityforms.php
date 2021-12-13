@@ -5,6 +5,13 @@
     static function setup() {
       if (class_exists("GFAPI")) {
         add_action('graphql_register_types', ["EDGravityForms", "register"]);
+
+        add_action('rest_api_init', function() {
+          register_rest_route('ed/v1', '/gf/submit', [
+            'methods' => 'POST',
+            'callback' => ['EDGravityForms', 'handleSubmit']
+          ]);
+        });
       }
     }
 
@@ -52,6 +59,15 @@
           ];
         }
       ]);
+    }
+
+
+    static function handleSubmit($data) {
+      $payload = $data->get_json_params();
+
+      $result = GFAPI::submit_form($payload['formID'], $payload['values']);
+
+      return $result;
     }
 
   }
