@@ -60,7 +60,7 @@
         }
 
         $types = array('page');
-        if (preg_match('|Template Post Type:(.*)$|mi', file_get_contents($full_path), $type)) {
+        if (preg_match('|Template Post Type:(.*)$|mi', $contents, $type)) {
           $types = explode( ',', _cleanup_header_comment($type[1]));
         }
 
@@ -122,8 +122,6 @@
           $_scripts = "";
           $_styles = "";
 
-          $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
-
           if (file_exists(ED()->themePath."/dist/frontend/main.css")) {
             $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
           }
@@ -133,7 +131,7 @@
           foreach ($templates as $template) {
             $isCurrentTemplate = ED()->themePath.$templateBundle === $template;
             $async = $isCurrentTemplate ? '' : 'async';
-            $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion(ED()->themeURL . $templateBundle) . "\"></script>\n";
+            $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion($template) . "\"></script>\n";
           }
           if ($templateBundle) {
             $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
@@ -141,6 +139,16 @@
               $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
             }
           }
+
+          $extras = array_merge(glob(ED()->themePath."/dist/frontend/*ContentBlocks*.js"), glob(ED()->themePath."/dist/frontend/vendors*.js"));
+          foreach ($extras as $script) {
+            if ($script !== ED()->themePath.$templateBundle) {
+              $_scripts .= "<script type=\"text/javascript\" src=\"" . self::appendFileVersion($script) . "\"></script>\n";
+            }
+          }
+
+          $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
+          
 
           $data['errorStack'] = ErrorCollector::pop();
           if (@count($data['errorStack']) == 0) {
@@ -163,9 +171,9 @@
 
     static function appendFileVersion($script) {
       $file = str_replace(ED()->themeURL, ED()->themePath, $script);
-      if (file_exists($file)) {
-        $script .= "?v=".@filemtime($file);
-      }
+      // if (file_exists($file)) {
+        $script = str_replace(ED()->themePath, ED()->themeURL, $script) . "?v=".@filemtime($file);
+      // }
       return $script;
     }
 

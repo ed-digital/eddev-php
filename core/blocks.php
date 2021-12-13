@@ -362,7 +362,7 @@
         // No .graphql file exists, therefore no props
         return [];
       }
-      ErrorCollector::push("block_".$meta['id'], sprintf("running block query file '%s'", str_replace($queryFile, ED()->themePath, "")));
+      ErrorCollector::push("block_".$meta['id'], "running block query file '".str_replace(ED()->themePath, "", $queryFile)."'");
       $contents = file_get_contents($queryFile);
       $params = EDTemplates::getQueryParams();
       // dump($attributes);
