@@ -34,6 +34,22 @@
       foreach ($includes as $include) {
         include_once($include);
       }
+      
+      $this->disableUserEnumeration();
+    }
+
+    function disableUserEnumeration() {
+      if(!is_admin()) {
+        add_filter('query_vars', function($public_query_vars) {
+          foreach(['author', 'author_name'] as $var) {
+            $key = array_search($var, $public_query_vars);
+            if (false !== $key) {
+              unset($public_query_vars[$key]);
+            }
+          }
+          return $public_query_vars;
+        });
+      }
     }
 
     function init() {
