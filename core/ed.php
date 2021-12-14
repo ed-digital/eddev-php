@@ -30,14 +30,11 @@
         define('GRAPHQL_DEBUG', 1);
       }
 
-      // Disable public GraphQL access
-      add_filter('graphql_pre_restrict_endpoint', function() {
-        if(wp_get_current_user() !== null && wp_get_current_user()->ID !== 0) {
-          return false;
-        } else {
-          return true;
-        }
-      });
+      // if (preg_match("/[\/\?]graphql/", $_SERVER['REQUEST_URI'])) {
+      //   if (wp_get_current_user() == null || wp_get_current_user()->ID == 0) {
+      //     exit;
+      //   }
+      // }
 
       $includes = glob(__DIR__."/*.php");
       foreach ($includes as $include) {
