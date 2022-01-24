@@ -209,6 +209,7 @@
       // Grab all the tags
       foreach ($tagNames as $tagName) {
         $output[$tagName] = [];
+        if (!$data) continue;
         $tags = @$data->getElementsByTagName($tagName);
         foreach ($tags as $el) {
           $attributes = [];

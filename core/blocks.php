@@ -94,29 +94,28 @@
           $postType->template_lock = 'all';
         });
       } else if ($lock['template']) {
-        
+        add_filter('block_editor_settings', function($settings, $post) use($lock) {
+          // dump($post->post_type, $lock['template']);
+          if ($post->post_type === $lock['type']) {
+            $settings['template'] = $lock['content'];
+            $settings['template_lock'] = 'all';
+          } else if ($post->post_type === "page" && $lock['template']) {
+            // Disabled, because not really possible atm...
+  
+            $templateName = @get_page_template_slug($post->ID);
+            if (!$templateName) $templateName = "default";
+            if ($templateName) {
+              $templateName = str_replace("views/", "", str_replace(".tsx", "", $templateName));
+            }
+  
+            if ($templateName === $lock['template']) {
+              $settings['template'] = $lock['content'];
+              $settings['template_lock'] = 'all';
+            }
+          }
+          return $settings;
+        }, 10, 2);
       }
-      // add_filter('block_editor_settings', function($settings, $post) use($lock) {
-      //   // dump($post->post_type, $lock['template']);
-      //   if ($post->post_type === $lock['type']) {
-      //     $settings['template'] = $lock['content'];
-      //     $settings['template_lock'] = 'all';
-      //   } else if ($post->post_type === "page" && $lock['template']) {
-      //     // Disabled, because not really possible atm...
-
-      //     // $templateName = @get_page_template_slug($post->ID);
-      //     // if (!$templateName) $templateName = "default";
-      //     // if ($templateName) {
-      //     //   $templateName = str_replace("views/", "", str_replace(".tsx", "", $templateName));
-      //     // }
-
-      //     // if ($templateName === $lock['template']) {
-      //     //   $settings['template'] = $lock['content'];
-      //     //   $settings['template_lock'] = 'all';
-      //     // }
-      //   }
-      //   return $settings;
-      // }, 10, 2);
     }
 
     // This function is used for block previews only
@@ -167,7 +166,11 @@
       ];
       foreach ($lines as $line) {
         if (preg_match("/\s*\*?\s*([^:]+):\s*(.+)\s*/", $line, $matches)) {
-          $comment[strtolower($matches[1])] = $matches[2];
+          $key = strtolower($matches[1]);
+          $value = $matches[2];
+          if (!$comment[$key]) {
+            $comment[$key] = $value;
+          }
         }
       }
 
@@ -176,8 +179,10 @@
 
       $templates = $comment['templates'] ? preg_split("/[,\s]+/", $comment['templates']) : [];
       if (count($templates) === 0) {
-        $templates = ['default'];
+        $templates = null;
+        // $templates = ['default'];
       }
+
       return [
         'id' => $id,
         'name' => preg_replace("/[^a-z0-9-]+/i", "-", $comment['name']),

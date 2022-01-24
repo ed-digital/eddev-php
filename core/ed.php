@@ -84,11 +84,11 @@
         $this->updateDevFiles();
       }
 
-      add_filter('admin_init', function() {
+      add_filter('admin_enqueue_scripts', function() {
         wp_enqueue_script(
           'theme_admin_js',
           $this->themeURL.'/dist/admin/main.admin.js',
-          ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks'],
+          get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom'],
           filemtime(ED()->themePath.$style)
         );
         $style = "/dist/admin/main.css";
@@ -189,6 +189,12 @@
         throw new Error("Cannot register post type '$name' because it contains invalid characters, or is not all lowercase.");
       }
       register_post_type($name, $args);
+    }
+
+    function registerFieldType($name, $args) {
+      if (class_exists('EDACFField')) {
+        return new EDACFField($name, $args);
+      }
     }
   }
 
