@@ -98,7 +98,7 @@
           
           // Fetch the data
           $data = [
-            'view' => $cleanedTemplateName,
+            'view' => str_replace(".tsx", "", $cleanedTemplateName),
             'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
           ];
           $templateBundle = "";

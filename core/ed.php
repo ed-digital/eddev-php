@@ -163,7 +163,8 @@
 
       // Values to set
       $values = [
-        'DEBUG_GRAPHQL_URL' => $this->siteURL."/graphql"
+        'DEBUG_GRAPHQL_URL' => $this->siteURL."/graphql",
+        'SITE_URL' => $this->siteURL
       ];
 
       $lines = explode("\n", $contents);
