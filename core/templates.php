@@ -158,7 +158,7 @@
           if ($isPropsRequest) {
             header('Content-type: text/json');
             $data['meta'] = self::getMeta();
-            echo json_encode($data, JSON_PRETTY_PRINT);
+            echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             exit;
           } else {
             $_content = "<script>window._PAGE_DATA = ".json_encode($data, JSON_PRETTY_PRINT)."</script>";
