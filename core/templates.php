@@ -162,7 +162,11 @@
             exit;
           } else {
             $_content = "<script>window._PAGE_DATA = ".json_encode($data, JSON_PRETTY_PRINT)."</script>";
-            include(ED()->themePath."/index.php");
+            if (file_exists(ED()->themePath."/main.php")) {
+              include(ED()->themePath."/main.php");
+            } else {
+              include(ED()->themePath."/index.php");
+            }
           }
         }
         exit;
