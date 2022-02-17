@@ -12,7 +12,7 @@
       });
 
       add_action('wp_head', function() {
-        self::printFaviconTags($favs);
+        echo implode("\n", self::printFaviconTags($favs));
       });
     }
 
@@ -45,7 +45,7 @@
           @preg_match("/[0-9]+x[0-9]+/", $name, $match);
           $size = @$match[0];
           $url = $path.$name;
-          $lines[] = "<link rel=\"{$rel}\" href=\"{$url}\" sizes=\"{$size}\">\n";
+          $lines[] = "<link rel=\"{$rel}\" href=\"{$url}\" sizes=\"{$size}\">";
         }
       }
       return $lines;
