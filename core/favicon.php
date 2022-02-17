@@ -44,7 +44,7 @@
         foreach ($names as $name) {
           @preg_match("/[0-9]+x[0-9]+/", $name, $match);
           $size = @$match[0];
-          $url = $path.$name;
+          $url = $path.$name.".png";
           $lines[] = "<link rel=\"{$rel}\" href=\"{$url}\" sizes=\"{$size}\">";
         }
       }
