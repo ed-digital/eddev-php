@@ -42,6 +42,7 @@
       }
       
       $this->disableUserEnumeration();
+      $this->enableDevUI();
     }
 
     function disableUserEnumeration() {
@@ -57,6 +58,15 @@
         });
       }
     }
+
+    function enableDevUI() {
+      add_action('wp_head', function() {
+        if (get_current_user_id() == 1) {
+          echo "<script type=\"text/javascript\">window.ENABLE_DEV_UI = true;</script>";
+        }
+      });
+    }
+
     function init() {
       // Include backend folder
       $this->includeBackendFiles();
