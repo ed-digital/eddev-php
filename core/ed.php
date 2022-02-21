@@ -157,7 +157,7 @@
       ], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
       $contents = preg_replace('/^(  +?)\\1(?=[^ ])/m', '$1', $contents);
       $file = ED()->themePath."/.graphqlrc.json";
-      if (file_get_contents($file) !== $contents) {
+      if (@file_get_contents($file) !== $contents) {
         file_put_contents($file, $contents);
       }
     }
@@ -189,7 +189,7 @@
 
       $contents = implode("\n", $lines);
       
-      if (file_get_contents($file) !== $contents) {
+      if (@file_get_contents($file) !== $contents) {
         file_put_contents($file, $contents);
       }
     }
