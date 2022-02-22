@@ -38,7 +38,7 @@
         ]
       ];
 
-      $path = ED()->themeURL."/assets/favicon/";
+      $path = str_replace(ED()->siteURL, "", ED()->themeURL)."/assets/favicon/";
       $lines = [];
       foreach ($icons as $rel => $names) {
         foreach ($names as $name) {
