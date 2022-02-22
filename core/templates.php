@@ -148,7 +148,6 @@
           }
 
           $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
-          
 
           $data['errorStack'] = ErrorCollector::pop();
           if (@count($data['errorStack']) == 0) {
@@ -162,11 +161,7 @@
             exit;
           } else {
             $_content = "<script>window._PAGE_DATA = ".json_encode($data, JSON_PRETTY_PRINT)."</script>";
-            if (file_exists(ED()->themePath."/main.php")) {
-              include(ED()->themePath."/main.php");
-            } else {
-              include(ED()->themePath."/index.php");
-            }
+            include(ED()->themePath."/index.php");
           }
         }
         exit;

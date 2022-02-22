@@ -4,8 +4,7 @@
     static $instance;
 
     public $config = [
-      'serverless' => false,
-      'serverlessUrl' => ''
+      
     ];
 
     public $views = [];
@@ -43,6 +42,38 @@
       
       $this->disableUserEnumeration();
       $this->enableDevUI();
+
+      add_action('wp_head', function() {
+        $endpoint = $this->getServerlessEndpoint();
+        if ($endpoint) {
+          echo "\n<script type=\"text/javascript\">window.SERVERLESS_ENDPOINT = ".json_encode($endpoint."/")."</script>\n";
+        }
+      });
+    }
+
+    function getConfig() {
+      return json_decode(file_get_contents(ED()->themePath."/ed.config.json"), true);
+    }
+
+    function isLocalDev() {
+      return preg_match("/(\.local|localhost|127\.0\.0\.1)/", $_SERVER['HTTP_HOST']);
+    }
+
+    function getServerlessEndpoint() {
+      if ($this->isLocalDev()) {
+        return $this->readEnvValue("DEBUG_SERVERLESS_ENDPOINT");
+      } else {
+        $hostname = $_SERVER['HTTP_HOST'];
+        $config = $this->getConfig();
+        if (@$config['serverless']['enabled'] && is_array($config['serverless']['endpoints'])) {
+          foreach ($config['serverless']['endpoints'] as $wpHost => $serverlessHost) {
+            if ($wpHost === $hostname || $wpHost === "*") {
+              return "https://".$serverlessHost;
+            }
+          }
+        }
+      }
+      return null;
     }
 
     function disableUserEnumeration() {
@@ -160,6 +191,22 @@
       if (@file_get_contents($file) !== $contents) {
         file_put_contents($file, $contents);
       }
+    }
+
+    private function readEnvValue($key) {
+      $contents = '';
+      $file = $this->themePath."/.env";
+      if (file_exists($file)) {
+        $contents = @file_get_contents($file);
+        if (!$contents) $contents = '';
+      }
+      $lines = explode("\n", $contents);
+      foreach ($lines as $line) {
+        if (strpos($line, $key."=") === 0) {
+          return str_replace($key."=", "", $line);
+        }
+      }
+      return null;
     }
     
     private function updateEnv() {
