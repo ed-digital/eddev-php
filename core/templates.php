@@ -283,7 +283,7 @@
         ErrorCollector::push("view", sprintf("running app query file '%s'", str_replace(ED()->themePath, "", $queryFile)));
         $query = file_get_contents($queryFile);
         $result = graphql([
-          "query" => $query,
+          "query" => $query . FragmentLoader::getAll(),
           "variables" => $params
         ]);
         if ($result['errors']) {
