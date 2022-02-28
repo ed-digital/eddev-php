@@ -59,6 +59,10 @@
       return preg_match("/(\.local|localhost|127\.0\.0\.1)/", $_SERVER['HTTP_HOST']);
     }
 
+    function addCustomRoute($pattern, $args) {
+      Routes::registerRoute($pattern, $args);
+    }
+
     function getServerlessEndpoint() {
       if ($this->isLocalDev()) {
         return $this->readEnvValue("DEBUG_SERVERLESS_ENDPOINT");
