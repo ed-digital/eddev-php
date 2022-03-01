@@ -17,6 +17,14 @@
     }
 
     static function printFaviconTags() {
+      $lines = [];
+
+      // SVG icon
+      if (file_exists(ED()->themePath . "/assets/favicon/favicon.svg")) {
+        $lines[] = "<link rel=\"icon\" href=\"".esc_attr(ED()->themeURL."/assets/favicon/favicon.svg")."\" />";
+      }
+
+      // Regular PNG icons
       $icons = [
         'icon' => [
           '120x120',
@@ -37,9 +45,7 @@
           '196x196'
         ]
       ];
-
       $path = str_replace(ED()->siteURL, "", ED()->themeURL)."/assets/favicon/";
-      $lines = [];
       foreach ($icons as $rel => $names) {
         foreach ($names as $name) {
           @preg_match("/[0-9]+x[0-9]+/", $name, $match);
