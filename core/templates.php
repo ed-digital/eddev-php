@@ -239,10 +239,14 @@
         );
         $postID = !empty($revisions) ? array_values($revisions)[0] : $postID;
       }
-      return [
-        'postId' => $postID ?? $_POST['post_id'] ?? $_GET['id'],
-        'preview' => $_GET['preview'] && $_GET['preview_id']
-      ];
+      $customRouteParams = Routes::getCustomRouteQueryVars();
+      return array_merge(
+        [
+          'postId' => $postID ?? $_POST['post_id'] ?? $_GET['id'],
+          'preview' => $_GET['preview'] && $_GET['preview_id']
+        ],
+        $customRouteParams
+      );
     }
 
     static function getDataForTemplate($template) {
@@ -254,6 +258,7 @@
       
       // Does a .graphql file exist?
       $templateQueryFile = preg_replace("/\.(tsx|jsx|js|ts|php)$/i", ".graphql", $template);
+
       if (file_exists($templateQueryFile)) {
         ErrorCollector::push("view", sprintf("running view query file '%s'", str_replace(ED()->themePath, "", $templateQueryFile)));
         $query = file_get_contents($templateQueryFile);
