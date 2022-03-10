@@ -42,6 +42,7 @@
       
       $this->disableUserEnumeration();
       $this->enableDevUI();
+      $this->enableDevReact();
 
       add_action('wp_head', function() {
         $endpoint = $this->getServerlessEndpoint();
@@ -102,6 +103,20 @@
       });
     }
 
+    function enableDevReact() {
+      add_filter("script_loader_src", function($src, $handle) {
+        if (($handle === "react-dom" || $handle === "react") && preg_match("/plugins\/gutenberg\/vendor\/react/", $src)) {
+          $files = scandir(ED()->sitePath."/wp-content/plugins/gutenberg/vendor");
+          foreach ($files as $file) {
+            if (strpos($file, $handle.".") === 0 && strpos($file, "min") === false) {
+              return ED()->siteURL."/wp-content/plugins/gutenberg/vendor/".$file;
+            }
+          }
+        }
+        return $src;
+      }, 2, 2);
+    }
+
     function init() {
       // Include backend folder
       $this->includeBackendFiles();
@@ -144,6 +159,10 @@
 
     function tagCoreBlocks($tag, $blocks) {
       EDBlocks::tagCoreBlocks($tag, $blocks);
+    }
+
+    function groupCoreBlocks($blockName, $blocks) {
+      EDBlocks::groupCoreBlocks($blockName, $blocks);
     }
 
     function templateLock($lock) {

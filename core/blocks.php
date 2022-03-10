@@ -7,6 +7,7 @@
 
     static $blocks;
     static $coreBlockTags = [];
+    static $blockGroupTargets = [];
 
     static function init() {
       // Initial load of blocks
@@ -83,6 +84,12 @@
     static function tagCoreBlocks($tag, $blocks) {
       foreach ($blocks as $block) {
         self::$coreBlockTags[$block][] = $tag;
+      }
+    }
+
+    static function groupCoreBlocks($targetName, $blocks) {
+      foreach ($blocks as $block) {
+        self::$blockGroupTargets[$block] = $targetName;
       }
     }
 
@@ -464,15 +471,75 @@
       });
 
       // Process each block
-      return array_values(array_map(function($block) {
+      $blocks = array_values(array_map(function($block) {
         $block = $this->processSingleBlock($block);
         if (is_array($block['innerBlocks']) && count($block['innerBlocks'])) {
           $block['innerBlocks'] = $this->processBlocks($block['innerBlocks']);
         }
         return $block;
       }, $blocks));
+
+      // Group blocks
+      if (count(EDBlocks::$blockGroupTargets) > 0) {
+        $blocks = $this->groupBlocks($blocks);
+      }
+      return $blocks;
     }
 
+    public function groupBlocks($blocks) {
+      $grouper = new BlockGrouper();
+      $result = $grouper->groupBlocks($blocks);;
+      return $result;
+    }
+
+  }
+
+  class BlockGrouper {
+    private $result = [];
+
+    private $currentTarget = null;
+    private $currentGroupHTML = [];
+
+    public function groupBlocks($blocks) {
+      foreach ($blocks as $block) {
+        $target = EDBlocks::$blockGroupTargets[$block['blockName']];
+        if ($target !== $this->currentTarget) {
+          if ($this->currentTarget) {
+            $this->finalizeGroup();
+          }
+          if ($target) {
+            $this->currentTarget = $target;
+            $this->currentGroupHTML = [];
+          }
+        }
+        if ($target) {
+          $this->currentGroupHTML[] = $block['innerHTML'];
+        } else {
+          $this->result[] = $block;
+        }
+      }
+
+      $this->finalizeGroup();
+
+      return $this->result;
+    }
+
+    public function finalizeGroup() {
+      if (!$this->currentTarget) return;
+
+      $this->result[] = [
+        'grouped' => true,
+        'blockName' => $this->currentTarget,
+        'attrs' => (object)[],
+        'innerBlocks' => [],
+        'innerHTML' => implode("\n", $this->currentGroupHTML),
+        'innerContent' => [],
+        'props' => (object)[],
+        'rule' => 'render'
+      ];
+      $this->currentTarget = null;
+      $this->currentGroupHTML = [];
+    }
   }
 
   class BlockQLRoot {
