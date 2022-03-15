@@ -368,7 +368,7 @@
       return $this->processBlocks(parse_blocks($content));
     }
 
-    public function runBlockQuery($meta, $attributes) {
+    public static function runBlockQuery($meta, $attributes) {
       $queryFile = ED()->themePath . "/blocks/" . $meta['id'] . ".graphql";
       if (!file_exists($queryFile)) {
         // No .graphql file exists, therefore no props
