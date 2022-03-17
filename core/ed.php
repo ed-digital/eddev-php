@@ -155,6 +155,13 @@
           wp_enqueue_style('theme_admin_css', ED()->themeURL.$style, [], filemtime(ED()->themePath.$style));
         }
       });
+
+      add_action('enqueue_block_editor_assets', function() {
+        add_action('admin_print_scripts', function() {
+          $data = EDTemplates::getDataForApp();
+          echo "<script>window.__ED_APP_DATA = ".json_encode($data)."</script>";
+        });
+      });
     }
 
     function tagCoreBlocks($tag, $blocks) {
@@ -241,9 +248,14 @@
       }
 
       // Values to set
+      $siteURL = $this->siteURL;
+      if (strpos($siteURL, ".local") > 0) {
+        // Prefer http when using local! Avoids issues with SSL
+        $siteURL = str_replace("https", "http", $siteURL);
+      }
       $values = [
-        'DEBUG_GRAPHQL_URL' => $this->siteURL."/graphql",
-        'SITE_URL' => $this->siteURL
+        'DEBUG_GRAPHQL_URL' => $siteURL."/graphql",
+        'SITE_URL' => $siteURL
       ];
 
       $lines = explode("\n", $contents);
