@@ -105,12 +105,18 @@
 
     function enableDevReact() {
       add_filter("script_loader_src", function($src, $handle) {
-        if (($handle === "react-dom" || $handle === "react") && preg_match("/plugins\/gutenberg\/vendor\/react/", $src)) {
-          $files = scandir(ED()->sitePath."/wp-content/plugins/gutenberg/vendor");
-          foreach ($files as $file) {
-            if (strpos($file, $handle.".") === 0 && strpos($file, "min") === false) {
-              return ED()->siteURL."/wp-content/plugins/gutenberg/vendor/".$file;
+        if (($handle === "react-dom" || $handle === "react")) {
+          if (preg_match("/plugins\/gutenberg\/vendor\/react/", $src)) {
+            // Pre-Gutenberg 12.9.0
+            $files = scandir(ED()->sitePath."/wp-content/plugins/gutenberg/vendor");
+            foreach ($files as $file) {
+              if (strpos($file, $handle.".") === 0 && strpos($file, "min") === false) {
+                return ED()->siteURL."/wp-content/plugins/gutenberg/vendor/".$file;
+              }
             }
+          } else {
+            // Gutenberg 13.0+
+            return preg_replace("/\.min\./", ".", $src);
           }
         }
         return $src;
