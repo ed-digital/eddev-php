@@ -95,6 +95,24 @@
           $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
 
           ErrorCollector::push('template', sprintf("running template '%s'", $template));
+
+          // Test for a redirect, via the Redirection plugin
+          if (class_exists('Redirection')) {
+            add_action('redirection_last', function($mod, $items, $redirect) {
+              if ($redirect[0]) {
+                $url = $redirect[0]->get_action_data();
+                $code = $redirect[0]->get_action_code();
+                echo json_encode([
+                  "redirect" => $url,
+                  "code" => $code
+                ]);
+                exit;
+              }
+            }, 3, 10);
+            $redirection = Redirection::init();
+            $redModule = $redirection->get_module();
+            $redModule->init();
+          }
           
           // Fetch the data
           $data = [
