@@ -71,11 +71,16 @@
         $hostname = $_SERVER['HTTP_HOST'];
         $config = $this->getConfig();
         if (@$config['serverless']['enabled'] && is_array($config['serverless']['endpoints'])) {
+          $fallback = "";
           foreach ($config['serverless']['endpoints'] as $wpHost => $serverlessHost) {
-            if ($wpHost === $hostname || $wpHost === "*") {
+            if ($wpHost === "*") {
+              $fallback = "https://".$serverlessHost;
+            }
+            if ($wpHost === $hostname) {
               return "https://".$serverlessHost;
             }
           }
+          return $fallback;
         }
       }
       return null;
