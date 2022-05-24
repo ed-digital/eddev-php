@@ -41,6 +41,16 @@
     }
 
     static function handleQueryRequest($data) {
+      $cacheTime = @ED()->getCacheConfig()['queries'] ?? 0;
+      if (!early_user_logged_in()) {
+        if ((int)$cacheTime) {
+          header('Cache-Control: public, max-age='.$cacheTime);
+        }
+        header('X-ED-Cache-Duration: '.(int)$cacheTime);
+        header('X-ED-Generated-At: '.date("r"));
+        header('X-ED-URI: '.$_SERVER['REQUEST_URI']);
+      }
+
       $name = $data['name'];
       $params = @json_decode(stripslashes($_GET['params']), true);
 
@@ -48,10 +58,10 @@
       
       if (!$query) return self::error("Unknown query");
 
-      $result = graphql([
+      $result = cached_graphql([
         "query" => $query . FragmentLoader::getAll(),
         "variables" => $params
-      ]);
+      ], $cacheTime);
 
       return $result;
     }

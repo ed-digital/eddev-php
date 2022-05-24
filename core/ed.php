@@ -3,9 +3,7 @@
   class EDCore {
     static $instance;
 
-    public $config = [
-      
-    ];
+    private $config;
 
     public $views = [];
 
@@ -53,7 +51,20 @@
     }
 
     function getConfig() {
-      return json_decode(file_get_contents(ED()->themePath."/ed.config.json"), true);
+      if (!$this->config) {
+        $this->config = json_decode(file_get_contents(ED()->themePath."/ed.config.json"), true) ?? [];
+      }
+      return $this->config;
+    }
+
+    function getCacheConfig() {
+      $config = $this->getConfig();
+      $hostname = $_SERVER['HTTP_HOST'];
+      if ($config['cache']) {
+        if (@$config['cache'][$hostname]) return $config['cache'][$hostname];
+        if (@$config['cache']["*"]) return $config['cache']["*"];
+      }
+      return [];
     }
 
     function isLocalDev() {
@@ -185,10 +196,6 @@
 
     function templateLock($lock) {
       EDBlocks::templateLock($lock);
-    }
-
-    function setConfig($config) {
-      $this->config = array_merge($this->config, $config);
     }
 
     function configureView($name, $config) {

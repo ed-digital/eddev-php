@@ -85,102 +85,110 @@
 
     private static function hookViewResponder() {
       add_filter('template_include', function($template) {
+
+        // Cache and generation headers, for non-logged-in users
+        if (!early_user_logged_in()) {
+          $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
+          if ((int)$cacheTime) {
+            header('Cache-Control: public, max-age='.$cacheTime);
+          }
+          header('X-ED-Cache-Duration: '.(int)$cacheTime);
+          header('X-ED-Generated-At: '.date("r"));
+          header('X-ED-URI: '.$_SERVER['REQUEST_URI']);
+        }
+        
         $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
         $isPropsRequest = ED()->isPropsRequest();
-        if (ED()->config['serverless']) {
-          dump("SERVERLESS NOT READY", $template);
+
+        $_content = "";
+
+        $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
+
+        ErrorCollector::push('template', sprintf("running template '%s'", $template));
+
+        // Test for a redirect, via the Redirection plugin
+        if (class_exists('Redirection')) {
+          add_action('redirection_last', function($mod, $items, $redirect) {
+            if ($redirect[0]) {
+              $url = $redirect[0]->get_action_data();
+              $code = $redirect[0]->get_action_code();
+              echo json_encode([
+                "redirect" => $url,
+                "code" => $code
+              ]);
+              exit;
+            }
+          }, 3, 10);
+          $redirection = Redirection::init();
+          $redModule = $redirection->get_module();
+          $redModule->init();
+        }
+        
+        // Fetch the data
+        $data = [
+          'view' => str_replace(".tsx", "", $cleanedTemplateName),
+          'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
+        ];
+        $templateBundle = "";
+        $data['viewData'] = self::getDataForTemplate($template);
+        if (!$isPropsRequest || $_GET['_props'] === 'all') {
+          $data['appData'] = self::getDataForApp();
+        }
+        if ($isJSX) {
+          $dadta['viewType'] = 'react';
+          $templateBundle = "/dist/frontend/".preg_replace("/[^0-9A-Z]/i", "-", $cleanedTemplateName).".frontend.js";
         } else {
-          $_content = "";
+          ob_start();
+          include($template);
+          $data['viewType'] = 'html';
+          $data['view'] = 'views/_html.tsx';
+          $data['viewData']['data']['template'] = $template;
+          $data['viewData']['data']['htmlContent'] = ob_get_contents();
+          ob_end_clean();
+        }
 
-          $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
+        $_scripts = "";
+        $_styles = "";
 
-          ErrorCollector::push('template', sprintf("running template '%s'", $template));
+        if (file_exists(ED()->themePath."/dist/frontend/main.css")) {
+          $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
+        }
 
-          // Test for a redirect, via the Redirection plugin
-          if (class_exists('Redirection')) {
-            add_action('redirection_last', function($mod, $items, $redirect) {
-              if ($redirect[0]) {
-                $url = $redirect[0]->get_action_data();
-                $code = $redirect[0]->get_action_code();
-                echo json_encode([
-                  "redirect" => $url,
-                  "code" => $code
-                ]);
-                exit;
-              }
-            }, 3, 10);
-            $redirection = Redirection::init();
-            $redModule = $redirection->get_module();
-            $redModule->init();
+        // Preload each template
+        $templates = glob(ED()->themePath."/dist/frontend/view*.js");
+        foreach ($templates as $template) {
+          $isCurrentTemplate = ED()->themePath.$templateBundle === $template;
+          $async = $isCurrentTemplate ? '' : 'async';
+          $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion($template) . "\"></script>\n";
+        }
+        if ($templateBundle) {
+          $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
+          if (file_exists(ED()->themePath.$cssFile)) {
+            $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
           }
-          
-          // Fetch the data
-          $data = [
-            'view' => str_replace(".tsx", "", $cleanedTemplateName),
-            'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
-          ];
-          $templateBundle = "";
-          $data['viewData'] = self::getDataForTemplate($template);
-          if (!$isPropsRequest || $_GET['_props'] === 'all') {
-            $data['appData'] = self::getDataForApp();
-          }
-          if ($isJSX) {
-            $dadta['viewType'] = 'react';
-            $templateBundle = "/dist/frontend/".preg_replace("/[^0-9A-Z]/i", "-", $cleanedTemplateName).".frontend.js";
-          } else {
-            ob_start();
-            include($template);
-            $data['viewType'] = 'html';
-            $data['view'] = 'views/_html.tsx';
-            $data['viewData']['data']['template'] = $template;
-            $data['viewData']['data']['htmlContent'] = ob_get_contents();
-            ob_end_clean();
-          }
+        }
 
-          $_scripts = "";
-          $_styles = "";
+        $extras = array_merge(glob(ED()->themePath."/dist/frontend/*ContentBlocks*.js"), glob(ED()->themePath."/dist/frontend/vendors*.js"));
+        foreach ($extras as $script) {
+          if ($script !== ED()->themePath.$templateBundle) {
+            $_scripts .= "<script type=\"text/javascript\" src=\"" . self::appendFileVersion($script) . "\"></script>\n";
+          }
+        }
 
-          if (file_exists(ED()->themePath."/dist/frontend/main.css")) {
-            $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
-          }
+        $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
 
-          // Preload each template
-          $templates = glob(ED()->themePath."/dist/frontend/view*.js");
-          foreach ($templates as $template) {
-            $isCurrentTemplate = ED()->themePath.$templateBundle === $template;
-            $async = $isCurrentTemplate ? '' : 'async';
-            $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion($template) . "\"></script>\n";
-          }
-          if ($templateBundle) {
-            $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
-            if (file_exists(ED()->themePath.$cssFile)) {
-              $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
-            }
-          }
-
-          $extras = array_merge(glob(ED()->themePath."/dist/frontend/*ContentBlocks*.js"), glob(ED()->themePath."/dist/frontend/vendors*.js"));
-          foreach ($extras as $script) {
-            if ($script !== ED()->themePath.$templateBundle) {
-              $_scripts .= "<script type=\"text/javascript\" src=\"" . self::appendFileVersion($script) . "\"></script>\n";
-            }
-          }
-
-          $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
-
-          $data['errorStack'] = ErrorCollector::pop();
-          if (@count($data['errorStack']) == 0) {
-            unset($data['errorStack']);
-          }
-          
-          if ($isPropsRequest) {
-            header('Content-type: text/json');
-            $data['meta'] = self::getMeta();
-            echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-            exit;
-          } else {
-            $_content = "<script>window._PAGE_DATA = ".json_encode($data, JSON_PRETTY_PRINT)."</script>";
-            include(ED()->themePath."/index.php");
-          }
+        if (@count($data['errorStack']) == 0) {
+          unset($data['errorStack']);
+        }
+        
+        if ($isPropsRequest) {
+          header('Content-type: text/json');
+          $data['meta'] = self::getMeta();
+          echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          exit;
+        } else {
+          $_content = "<script>window._PAGE_DATA = ".json_encode($data, JSON_PRETTY_PRINT)."</script>";
+          include(ED()->themePath."/index.php");
         }
         exit;
       }, 1000, 1);
@@ -273,17 +281,19 @@
 
       // Build up a generic data blob
       $data = null;
+
       
       // Does a .graphql file exist?
       $templateQueryFile = preg_replace("/\.(tsx|jsx|js|ts|php)$/i", ".graphql", $template);
-
+      
       if (file_exists($templateQueryFile)) {
         ErrorCollector::push("view", sprintf("running view query file '%s'", str_replace(ED()->themePath, "", $templateQueryFile)));
         $query = file_get_contents($templateQueryFile);
-        $result = graphql([
+        $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
+        $result = cached_graphql([
           "query" => $query . FragmentLoader::getAll(),
           "variables" => $params
-        ]);
+        ], $cacheTime);
         if ($result['errors']) {
           foreach ($result['errors'] as $err) {
             ErrorCollector::logError($err['message']);
@@ -292,7 +302,6 @@
         ErrorCollector::pop();
         $data = $result;
       }
-
 
       return $data;
     }
@@ -305,10 +314,11 @@
       if (file_exists($queryFile)) {
         ErrorCollector::push("view", sprintf("running app query file '%s'", str_replace(ED()->themePath, "", $queryFile)));
         $query = file_get_contents($queryFile);
-        $result = graphql([
+        $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
+        $result = cached_graphql([
           "query" => $query . FragmentLoader::getAll(),
           "variables" => $params
-        ]);
+        ], $cacheTime);
         if ($result['errors']) {
           foreach ($result['errors'] as $err) {
             ErrorCollector::logError($err['message']);
