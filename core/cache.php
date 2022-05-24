@@ -28,7 +28,7 @@
 
   // Function which allows us to test if the user is logged in, before the init action
   function early_user_logged_in() {
-    return wp_validate_auth_cookie($_COOKIE[LOGGED_IN_COOKIE], 'logged_in');
+    return $_COOKIE[LOGGED_IN_COOKIE] ? true : false;
   }
 
   // Caches GraphQL queries
