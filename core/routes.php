@@ -15,6 +15,7 @@
       
       add_filter('wp_title', ['Routes', 'filterTitle'], -1000, 1);
       add_filter('wpseo_title', ['Routes', 'filterTitle'], -1000, 1);
+      add_filter('wpseo_frontend_presentation', ['Routes', 'filterOpenGraph'], -1000, 1);
     }
 
     static function registerRoute($pattern, $args) {
@@ -81,6 +82,19 @@
         }
       }
       return $title;
+    }
+
+    static function filterOpenGraph($presentation) {
+      $route = get_query_var('custom_route');
+      if ($route) {
+        $args = self::$routes[$route];
+        if (is_string($args['ograph'])) {
+          return $args['ograph'];
+        } else if (is_callable($args['ograph'])) {
+          return $args['ograph'](self::getCustomRouteQueryVars(), $presentation);
+        }
+      }
+      return $presentation;
     }
   }
 
