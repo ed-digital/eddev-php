@@ -222,7 +222,8 @@
     }
 
     static function parseHeaderHTML($html) {
-      $data = DOMDocument::loadHTML(
+      $data = new DOMDocument();
+      $data->loadHTML(
         $html,
         LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
       );
