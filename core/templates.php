@@ -222,6 +222,7 @@
     }
 
     static function parseHeaderHTML($html) {
+      if (!$html) return [];
       $data = new DOMDocument();
       $data->loadHTML(
         $html,
