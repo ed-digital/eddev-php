@@ -177,7 +177,7 @@
 
         $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
 
-        if (@count($data['errorStack']) == 0) {
+        if (@$data['errorStack'] && @count($data['errorStack']) == 0) {
           unset($data['errorStack']);
         }
         
@@ -254,7 +254,7 @@
 
     static function getQueryParams() {
       $postID = get_queried_object_id();
-      if ($_GET['preview'] && $_GET['preview_id']) {
+      if (@$_GET['preview'] && $_GET['preview_id']) {
         $revisions = wp_get_post_revisions(
           $postID,
           [
@@ -268,8 +268,8 @@
       $customRouteParams = Routes::getCustomRouteQueryVars();
       return array_merge(
         [
-          'postId' => $postID ?? $_POST['post_id'] ?? $_GET['id'],
-          'preview' => $_GET['preview'] && $_GET['preview_id']
+          'postId' => @$postID ?? $_POST['post_id'] ?? $_GET['id'],
+          'preview' => @$_GET['preview'] && $_GET['preview_id']
         ],
         $customRouteParams
       );
@@ -294,7 +294,7 @@
           "query" => $query . FragmentLoader::getAll(),
           "variables" => $params
         ], $cacheTime);
-        if ($result['errors']) {
+        if (isset($result['errors'])) {
           foreach ($result['errors'] as $err) {
             ErrorCollector::logError($err['message']);
           }
@@ -311,6 +311,8 @@
 
       $data = null;
 
+      $params = [];
+
       if (file_exists($queryFile)) {
         ErrorCollector::push("view", sprintf("running app query file '%s'", str_replace(ED()->themePath, "", $queryFile)));
         $query = file_get_contents($queryFile);
@@ -319,7 +321,7 @@
           "query" => $query . FragmentLoader::getAll(),
           "variables" => $params
         ], $cacheTime);
-        if ($result['errors']) {
+        if (isset($result['errors'])) {
           foreach ($result['errors'] as $err) {
             ErrorCollector::logError($err['message']);
           }

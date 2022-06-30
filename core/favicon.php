@@ -12,7 +12,7 @@
       });
 
       add_action('wp_head', function() {
-        echo implode("\n", self::printFaviconTags($favs));
+        echo implode("\n", self::printFaviconTags());
       });
     }
 

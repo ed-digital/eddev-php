@@ -175,7 +175,7 @@
         if (preg_match("/\s*\*?\s*([^:]+):\s*(.+)\s*/", $line, $matches)) {
           $key = strtolower($matches[1]);
           $value = $matches[2];
-          if (!$comment[$key]) {
+          if (!@$comment[$key]) {
             $comment[$key] = $value;
           }
         }
@@ -184,7 +184,7 @@
       // Convert into an acf_register_post_type compatible array
       $id = str_replace(ED()->themePath."/blocks/", "", str_replace(".tsx", "", $file));
 
-      $templates = $comment['templates'] ? preg_split("/[,\s]+/", $comment['templates']) : [];
+      $templates = @$comment['templates'] ? preg_split("/[,\s]+/", $comment['templates']) : [];
       if (count($templates) === 0) {
         $templates = null;
         // $templates = ['default'];
@@ -192,28 +192,28 @@
 
       return [
         'id' => $id,
-        'name' => preg_replace("/[^a-z0-9-]+/i", "-", $comment['name']),
+        'name' => preg_replace("/[^a-z0-9-]+/i", "-", @$comment['name']),
         'graphql_field_name' => self::blockFieldName($id),
-        'title' => $comment['title'],
-        'description' => $comment['description'],
-        'keywords' => $comment['keywords'],
-        'category' => $comment['category'],
-        'icon' => $comment['icon'],
-        'post_types' => preg_split("/[,\s]+/", $comment['types']),
-        'mode' => $comment['mode'] ?? 'preview',
-        'align' => $comment['align'],
-        'align_text' => $comment['align text'],
-        'align_content' => $comment['align content'],
+        'title' => @$comment['title'],
+        'description' => @$comment['description'],
+        'keywords' => @$comment['keywords'],
+        'category' => @$comment['category'],
+        'icon' => @$comment['icon'],
+        'post_types' => preg_split("/[,\s]+/", @$comment['types']),
+        'mode' => @$comment['mode'] ?? 'preview',
+        'align' => @$comment['align'],
+        'align_text' => @$comment['align text'],
+        'align_content' => @$comment['align content'],
         'templates' => $templates,
-        'tags' => preg_split("/[,\s]+/", $comment['tags']),
-        'childTags' => preg_split("/[,\s]+/", $comment['child tags']),
+        'tags' => preg_split("/[,\s]+/", @$comment['tags']),
+        'childTags' => preg_split("/[,\s]+/", @$comment['child tags']),
         'supports' => [
-          "align" => self::parseBoolOrString($comment['supports align'], false),
-          "align_text" => self::parseBoolOrString($comment['supports align text'], false),
-          "align_content" => self::parseBoolOrString($comment['supports align content'], false),
-          "full_height" => self::parseBoolOrString($comment['supports full height'], false),
-          "mode" => self::parseBoolOrString($comment['supports auto'], true),
-          "multiple" => self::parseBoolOrString($comment['supports multiple'], false)
+          "align" => self::parseBoolOrString(@$comment['supports align'], false),
+          "align_text" => self::parseBoolOrString(@$comment['supports align text'], false),
+          "align_content" => self::parseBoolOrString(@$comment['supports align content'], false),
+          "full_height" => self::parseBoolOrString(@$comment['supports full height'], false),
+          "mode" => self::parseBoolOrString(@$comment['supports auto'], true),
+          "multiple" => self::parseBoolOrString(@$comment['supports multiple'], false)
         ]
       ];
     }
