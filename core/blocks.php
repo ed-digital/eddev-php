@@ -377,8 +377,7 @@
       ErrorCollector::push("block_".$meta['id'], "running block query file '".str_replace(ED()->themePath, "", $queryFile)."'");
       $contents = file_get_contents($queryFile);
       $params = EDTemplates::getQueryParams();
-      // dump($attributes);
-      // die();
+      if (!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
       BlockQLRoot::setContext($attributes);
       $result = graphql([
         'query' => $contents . FragmentLoader::getAll(),
