@@ -314,7 +314,7 @@
 
         // Create a new schema type for each block
         foreach ($blockNames as $blockName) {
-          $block = EDBlocks::$blocks[$blockName];
+          $block = @EDBlocks::$blocks[$blockName];
 
           if (!$block) continue;
 
@@ -384,7 +384,7 @@
         'variables' => $params
       ]);
 
-      if ($result['errors']) {
+      if (@$result['errors']) {
         foreach ($result['errors'] as $err) {
           ErrorCollector::logError($err['message']);
         }
@@ -439,7 +439,7 @@
         //   }
         // }
         $block['props'] = $this->runBlockQuery($meta, $block['attrs']);
-        $block['inline'] = $block['attrs']['inline'];
+        $block['inline'] = @$block['attrs']['inline'];
         $block['rule'] = 'react';
         unset($block['wpClassName']);
         return $block;
@@ -472,7 +472,7 @@
       // Process each block
       $blocks = array_values(array_map(function($block) {
         $block = $this->processSingleBlock($block);
-        if (is_array($block['innerBlocks']) && count($block['innerBlocks'])) {
+        if (is_array(@$block['innerBlocks']) && count(@$block['innerBlocks'])) {
           $block['innerBlocks'] = $this->processBlocks($block['innerBlocks']);
         }
         return $block;

@@ -216,8 +216,8 @@
       ob_end_clean();
 
       return [
-        'head' => @self::parseHeaderHTML($head),
-        'footer' => @self::parseHeaderHTML($foot)
+        'head' => self::parseHeaderHTML($head),
+        'footer' => self::parseHeaderHTML($foot)
       ];
     }
 
@@ -245,7 +245,11 @@
           }
           $inner = $el->nodeValue;
           if ($inner !== '') {
-            $attributes['__code'] = $inner;
+            if ($tagName === 'title') {
+              $attributes['__code'] = trim(preg_replace("/\n.+$/m", "", $inner));
+            } else {
+              $attributes['__code'] = $inner;
+            }
           }
           $output[$tagName][] = $attributes;
         }
