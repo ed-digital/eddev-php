@@ -102,7 +102,6 @@
         });
       } else if ($lock['template']) {
         add_filter('block_editor_settings', function($settings, $post) use($lock) {
-          // dump($post->post_type, $lock['template']);
           if ($post->post_type === $lock['type']) {
             $settings['template'] = $lock['content'];
             $settings['template_lock'] = 'all';
@@ -137,9 +136,6 @@
         // unset($args['data'][$field['key']]);
         $args['data'][ "_{$field['name']}"] = $field['key'];
       }
-
-      // dump($args);
-      // die();
 
       $result = BlockQL::runBlockQuery($block, [
         'id' => $args['id'],
@@ -207,13 +203,14 @@
         'templates' => $templates,
         'tags' => preg_split("/[,\s]+/", @$comment['tags']),
         'childTags' => preg_split("/[,\s]+/", @$comment['child tags']),
+        "canCache" => self::parseBoolOrString(@$comment['cache'], false),
         'supports' => [
           "align" => self::parseBoolOrString(@$comment['supports align'], false),
           "align_text" => self::parseBoolOrString(@$comment['supports align text'], false),
           "align_content" => self::parseBoolOrString(@$comment['supports align content'], false),
           "full_height" => self::parseBoolOrString(@$comment['supports full height'], false),
           "mode" => self::parseBoolOrString(@$comment['supports auto'], true),
-          "multiple" => self::parseBoolOrString(@$comment['supports multiple'], false)
+          "multiple" => self::parseBoolOrString(@$comment['supports multiple'], false),
         ]
       ];
     }
@@ -234,8 +231,6 @@
     public function init(TypeRegistry $type_registry) {
       $this->type_registry = $type_registry;
       $this->rules = $this->getBlockProcessingRules();
-      // dump($this->blockProcessingRules);
-      // die();
 
       // Register the root block query
       register_graphql_object_type('CurrentBlock', [
@@ -341,8 +336,6 @@
           $qualifier = "Fields defined in the \"".$field_group['title']."\" field type";
           $config['description'] = $field_group['description'] ? $field_group['description'] . ' | ' . $qualifier : $qualifier;
 
-          // dump("CurrentBlock", $field_name, $config);
-          // die();
           $this->register_graphql_field("CurrentBlock", $field_name, $config);
           
         }
@@ -369,13 +362,25 @@
     }
 
     public static function runBlockQuery($meta, $attributes) {
+      $cacheKey = null;
       $queryFile = ED()->themePath . "/blocks/" . $meta['id'] . ".graphql";
-      if (!file_exists($queryFile)) {
-        // No .graphql file exists, therefore no props
-        return [];
+      $contents = QueryLoader::loadQueryFile($queryFile);
+      if (!$contents) return;
+
+      // If caching is support by this block (via Supports memo, then calculate the cache key and look for a stored value)
+      if (@$meta['canCache']) {
+        $cacheKey = md5(@$contents."_".$attributes['name']."_".json_encode($attributes['data']). "_" . json_encode($attributes['inline']));
       }
+      if ($cacheKey) {
+        $cached = get_transient($cacheKey);
+        if ($cached) {
+          QueryMonitor::push($queryFile, "block (cached)");
+          QueryMonitor::pop();
+          return $cached;
+        }
+      }
+
       QueryMonitor::push($queryFile, "block");
-      $contents = file_get_contents($queryFile);
       $params = EDTemplates::getQueryParams();
       if (!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
       BlockQLRoot::setContext($attributes);
@@ -408,9 +413,12 @@
         }
       }
       QueryMonitor::pop();
+
+      if ($cacheKey) {
+        set_transient($cacheKey, $props, 60 * 60 * 24);
+      }
+
       return $props;
-      // dump($result);
-      // dump($contents, $params);
     }
 
     public function isCoreLayoutBlock($block) {
