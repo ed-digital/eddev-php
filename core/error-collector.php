@@ -1,12 +1,15 @@
 <?php
 
-  class ErrorCollector {
+  class QueryMonitor {
     static $stack = [];
 
-    static function push($id, $label) {
+    static function push($file, $label) {
       self::$stack[] = (object)[
-        "id" =>  $id,
+        "file" =>  str_replace(ED()->themePath, "", $file),
         "label" => $label,
+        "started" => microtime(true),
+        "finished" => -1,
+        "duration" => -1,
         "errors" => []
       ];
     }
@@ -22,6 +25,10 @@
 
     static function pop() {
       $popped = array_pop(self::$stack);
+      $popped->finished = microtime(true);
+      $popped->duration = $popped->finished - $popped->started;
+      unset($popped->start);
+      unset($popped->finished);
       $ctx = self::current();
       if ($ctx) {
         $ctx->children[] = $popped;

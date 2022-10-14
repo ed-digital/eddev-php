@@ -374,7 +374,7 @@
         // No .graphql file exists, therefore no props
         return [];
       }
-      ErrorCollector::push("block_".$meta['id'], "running block query file '".str_replace(ED()->themePath, "", $queryFile)."'");
+      QueryMonitor::push($queryFile, "block");
       $contents = file_get_contents($queryFile);
       $params = EDTemplates::getQueryParams();
       if (!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
@@ -386,22 +386,20 @@
 
       if (@$result['errors']) {
         foreach ($result['errors'] as $err) {
-          ErrorCollector::logError($err['message']);
+          QueryMonitor::logError($err['message']);
         }
-        ErrorCollector::pop();
+        QueryMonitor::pop();
         return ["errors" => $result['errors']];
       }
       
       // Extract result data into props
-      $props = [
-        
-      ];
+      $props = [];
       foreach ($result['data'] as $key => $value) {
+        // Extract the block data
         if ($key === 'block') {
-          // Extract the block data
           foreach ($value as $blockKey => $result) {
             if ($blockKey !== $meta['graphql_field_name']) {
-              throw new Error("Invalid block name in block query for \"".$meta['title']."\" - expected '".$meta['graphql_field_name']."' but found \"{$blockKey}\"");
+              QueryMonitor::logError("Invalid block name in block query for \"".$meta['title']."\" - expected '".$meta['graphql_field_name']."' but found \"{$blockKey}\"");
             }
             $props = array_merge($props, $result);
           }
@@ -409,7 +407,7 @@
           $props[$key] = $value;
         }
       }
-      ErrorCollector::pop();
+      QueryMonitor::pop();
       return $props;
       // dump($result);
       // dump($contents, $params);
