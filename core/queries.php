@@ -85,7 +85,7 @@
 
     static function loadQuery($name) {
       $path = ED()->themePath."/queries/".$name.".graphql";
-      return QueryLoader::loadQueryFile(path);
+      return file_get_contents($path);
     }
 
     static function error($message) {
