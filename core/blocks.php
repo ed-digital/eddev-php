@@ -102,7 +102,6 @@
         });
       } else if ($lock['template']) {
         add_filter('block_editor_settings', function($settings, $post) use($lock) {
-          // dump($post->post_type, $lock['template']);
           if ($post->post_type === $lock['type']) {
             $settings['template'] = $lock['content'];
             $settings['template_lock'] = 'all';
@@ -137,9 +136,6 @@
         // unset($args['data'][$field['key']]);
         $args['data'][ "_{$field['name']}"] = $field['key'];
       }
-
-      // dump($args);
-      // die();
 
       $result = BlockQL::runBlockQuery($block, [
         'id' => $args['id'],
@@ -207,13 +203,14 @@
         'templates' => $templates,
         'tags' => preg_split("/[,\s]+/", @$comment['tags']),
         'childTags' => preg_split("/[,\s]+/", @$comment['child tags']),
+        "canCache" => self::parseBoolOrString(@$comment['cache'], false),
         'supports' => [
           "align" => self::parseBoolOrString(@$comment['supports align'], false),
           "align_text" => self::parseBoolOrString(@$comment['supports align text'], false),
           "align_content" => self::parseBoolOrString(@$comment['supports align content'], false),
           "full_height" => self::parseBoolOrString(@$comment['supports full height'], false),
           "mode" => self::parseBoolOrString(@$comment['supports auto'], true),
-          "multiple" => self::parseBoolOrString(@$comment['supports multiple'], false)
+          "multiple" => self::parseBoolOrString(@$comment['supports multiple'], false),
         ]
       ];
     }
@@ -234,8 +231,6 @@
     public function init(TypeRegistry $type_registry) {
       $this->type_registry = $type_registry;
       $this->rules = $this->getBlockProcessingRules();
-      // dump($this->blockProcessingRules);
-      // die();
 
       // Register the root block query
       register_graphql_object_type('CurrentBlock', [
@@ -314,7 +309,7 @@
 
         // Create a new schema type for each block
         foreach ($blockNames as $blockName) {
-          $block = EDBlocks::$blocks[$blockName];
+          $block = @EDBlocks::$blocks[$blockName];
 
           if (!$block) continue;
 
@@ -341,8 +336,6 @@
           $qualifier = "Fields defined in the \"".$field_group['title']."\" field type";
           $config['description'] = $field_group['description'] ? $field_group['description'] . ' | ' . $qualifier : $qualifier;
 
-          // dump("CurrentBlock", $field_name, $config);
-          // die();
           $this->register_graphql_field("CurrentBlock", $field_name, $config);
           
         }
@@ -369,13 +362,25 @@
     }
 
     public static function runBlockQuery($meta, $attributes) {
+      $cacheKey = null;
       $queryFile = ED()->themePath . "/blocks/" . $meta['id'] . ".graphql";
-      if (!file_exists($queryFile)) {
-        // No .graphql file exists, therefore no props
-        return [];
+      $contents = QueryLoader::loadQueryFile($queryFile);
+      if (!$contents) return;
+
+      // If caching is support by this block (via Supports memo, then calculate the cache key and look for a stored value)
+      if (@$meta['canCache']) {
+        $cacheKey = md5(@$contents."_".$attributes['name']."_".json_encode($attributes['data']). "_" . json_encode($attributes['inline']));
       }
-      ErrorCollector::push("block_".$meta['id'], "running block query file '".str_replace(ED()->themePath, "", $queryFile)."'");
-      $contents = file_get_contents($queryFile);
+      if ($cacheKey) {
+        $cached = get_transient($cacheKey);
+        if ($cached) {
+          QueryMonitor::push($queryFile, "block (cached)");
+          QueryMonitor::pop();
+          return $cached;
+        }
+      }
+
+      QueryMonitor::push($queryFile, "block");
       $params = EDTemplates::getQueryParams();
       if (!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
       BlockQLRoot::setContext($attributes);
@@ -384,24 +389,22 @@
         'variables' => $params
       ]);
 
-      if ($result['errors']) {
+      if (@$result['errors']) {
         foreach ($result['errors'] as $err) {
-          ErrorCollector::logError($err['message']);
+          QueryMonitor::logError($err['message']);
         }
-        ErrorCollector::pop();
+        QueryMonitor::pop();
         return ["errors" => $result['errors']];
       }
       
       // Extract result data into props
-      $props = [
-        
-      ];
+      $props = [];
       foreach ($result['data'] as $key => $value) {
+        // Extract the block data
         if ($key === 'block') {
-          // Extract the block data
           foreach ($value as $blockKey => $result) {
             if ($blockKey !== $meta['graphql_field_name']) {
-              throw new Error("Invalid block name in block query for \"".$meta['title']."\" - expected '".$meta['graphql_field_name']."' but found \"{$blockKey}\"");
+              QueryMonitor::logError("Invalid block name in block query for \"".$meta['title']."\" - expected '".$meta['graphql_field_name']."' but found \"{$blockKey}\"");
             }
             $props = array_merge($props, $result);
           }
@@ -409,10 +412,13 @@
           $props[$key] = $value;
         }
       }
-      ErrorCollector::pop();
+      QueryMonitor::pop();
+
+      if ($cacheKey) {
+        set_transient($cacheKey, $props, 60 * 60 * 24);
+      }
+
       return $props;
-      // dump($result);
-      // dump($contents, $params);
     }
 
     public function isCoreLayoutBlock($block) {
@@ -439,7 +445,7 @@
         //   }
         // }
         $block['props'] = $this->runBlockQuery($meta, $block['attrs']);
-        $block['inline'] = $block['attrs']['inline'];
+        $block['inline'] = @$block['attrs']['inline'];
         $block['rule'] = 'react';
         unset($block['wpClassName']);
         return $block;
@@ -472,7 +478,7 @@
       // Process each block
       $blocks = array_values(array_map(function($block) {
         $block = $this->processSingleBlock($block);
-        if (is_array($block['innerBlocks']) && count($block['innerBlocks'])) {
+        if (is_array(@$block['innerBlocks']) && count(@$block['innerBlocks'])) {
           $block['innerBlocks'] = $this->processBlocks($block['innerBlocks']);
         }
         return $block;

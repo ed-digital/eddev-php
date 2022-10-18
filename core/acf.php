@@ -63,13 +63,13 @@
         $this->category = $args['category'] ?? 'basic';
         $this->defaults = $args['defaultSettings'] ?? [];
 
-        $this->hooks['loadValue'] = $args['loadValue'];
-        $this->hooks['updateValue'] = $args['updateValue'];
-        $this->hooks['validate'] = $args['validate'];
-        $this->hooks['resolve'] = $args['resolve'];
-        $this->hooks['renderSettings'] = $args['renderSettings'];
+        $this->hooks['loadValue'] = @$args['loadValue'];
+        $this->hooks['updateValue'] = @$args['updateValue'];
+        $this->hooks['validate'] = @$args['validate'];
+        $this->hooks['resolve'] = @$args['resolve'];
+        $this->hooks['renderSettings'] = @$args['renderSettings'];
 
-        $this->graphqlTypeName = $args['type'] ? $args['type'] : 'ED'.ucfirst(WPGraphQL\ACF\Config::camel_case($name.'_Field_Value'));
+        $this->graphqlTypeName = @$args['type'] ? $args['type'] : 'ED'.ucfirst(WPGraphQL\ACF\Config::camel_case($name.'_Field_Value'));
 
         // Register object type?
         if ($args['objectType']) {

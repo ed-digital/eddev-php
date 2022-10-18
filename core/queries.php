@@ -85,11 +85,7 @@
 
     static function loadQuery($name) {
       $path = ED()->themePath."/queries/".$name.".graphql";
-      if (file_exists($path)) {
-        return file_get_contents($path);
-      } else {
-        return null;
-      }
+      return file_get_contents($path);
     }
 
     static function error($message) {
@@ -103,3 +99,19 @@
   }
 
   QueryHandler::setup();
+
+  class QueryLoader {
+    static $cache = [];
+
+    static function loadQueryFile($file) {
+      if (isset($cache[$file])) {
+        return $cache[$file];
+      }
+      if (file_exists($file)) {
+        $cache[$file] = file_get_contents($file);
+        return $cache[$file];
+      } else {
+        return null;
+      }
+    }
+  }

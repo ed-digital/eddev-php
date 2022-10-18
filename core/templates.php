@@ -104,8 +104,6 @@
 
         $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
 
-        ErrorCollector::push('template', sprintf("running template '%s'", $template));
-
         // Test for a redirect, via the Redirection plugin
         if (class_exists('Redirection')) {
           add_action('redirection_last', function($mod, $items, $redirect) {
@@ -123,6 +121,9 @@
           $redModule = $redirection->get_module();
           $redModule->init();
         }
+
+
+        QueryMonitor::push($cleanedTemplateName, 'template');
         
         // Fetch the data
         $data = [
@@ -135,7 +136,7 @@
           $data['appData'] = self::getDataForApp();
         }
         if ($isJSX) {
-          $dadta['viewType'] = 'react';
+          $data['viewType'] = 'react';
           $templateBundle = "/dist/frontend/".preg_replace("/[^0-9A-Z]/i", "-", $cleanedTemplateName).".frontend.js";
         } else {
           ob_start();
@@ -177,9 +178,10 @@
 
         $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
 
-        if (@$data['errorStack'] && @count($data['errorStack']) == 0) {
-          unset($data['errorStack']);
-        }
+        // if (@$data['errorStack'] && @count($data['errorStack']) == 0) {
+        //   unset($data['errorStack']);
+        // }
+        $data['queryMonitor'] = QueryMonitor::pop();
         
         if ($isPropsRequest) {
           header('Content-type: text/json');
@@ -216,8 +218,8 @@
       ob_end_clean();
 
       return [
-        'head' => @self::parseHeaderHTML($head),
-        'footer' => @self::parseHeaderHTML($foot)
+        'head' => self::parseHeaderHTML($head),
+        'footer' => self::parseHeaderHTML($foot)
       ];
     }
 
@@ -245,7 +247,11 @@
           }
           $inner = $el->nodeValue;
           if ($inner !== '') {
-            $attributes['__code'] = $inner;
+            if ($tagName === 'title') {
+              $attributes['__code'] = trim(preg_replace("/\n.+$/m", "", $inner));
+            } else {
+              $attributes['__code'] = $inner;
+            }
           }
           $output[$tagName][] = $attributes;
         }
@@ -289,7 +295,7 @@
       $templateQueryFile = preg_replace("/\.(tsx|jsx|js|ts|php)$/i", ".graphql", $template);
       
       if (file_exists($templateQueryFile)) {
-        ErrorCollector::push("view", sprintf("running view query file '%s'", str_replace(ED()->themePath, "", $templateQueryFile)));
+        QueryMonitor::push($templateQueryFile, "view");
         $query = file_get_contents($templateQueryFile);
         $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
         $result = cached_graphql([
@@ -298,10 +304,10 @@
         ], $cacheTime);
         if (isset($result['errors'])) {
           foreach ($result['errors'] as $err) {
-            ErrorCollector::logError($err['message']);
+            QueryMonitor::logError($err['message']);
           }
         }
-        ErrorCollector::pop();
+        QueryMonitor::pop();
         $data = $result;
       }
 
@@ -316,7 +322,7 @@
       $params = [];
 
       if (file_exists($queryFile)) {
-        ErrorCollector::push("view", sprintf("running app query file '%s'", str_replace(ED()->themePath, "", $queryFile)));
+        QueryMonitor::push($queryFile, "app");
         $query = file_get_contents($queryFile);
         $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
         $result = cached_graphql([
@@ -325,10 +331,10 @@
         ], $cacheTime);
         if (isset($result['errors'])) {
           foreach ($result['errors'] as $err) {
-            ErrorCollector::logError($err['message']);
+            QueryMonitor::logError($err['message']);
           }
         }
-        ErrorCollector::pop();
+        QueryMonitor::pop();
         $data = $result;
       }
 
