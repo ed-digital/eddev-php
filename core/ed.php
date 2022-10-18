@@ -169,7 +169,7 @@
         wp_enqueue_script(
           'theme_admin_js',
           $this->themeURL.'/dist/admin/main.admin.js',
-          get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom'],
+          get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
           filemtime(ED()->themePath.$style)
         );
         $style = "/dist/admin/main.css";

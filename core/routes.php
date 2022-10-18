@@ -30,12 +30,12 @@
         }
       }
       self::$routes[$key] = $args;
-      // dump("Routes", self::$routes);
       add_rewrite_rule($pattern, $uri, $args['position'] ?? 'top');
+      // self::flush();
     }
 
     static function flush() {
-
+      flush_rewrite_rules();
     }
 
     static function isCustomRoute() {
@@ -61,6 +61,8 @@
     }
 
     static function filterTemplate($template) {
+      global $wp_query;
+      wp_reset_query();
       $route = get_query_var('custom_route');
       if ($route) {
         $args = self::$routes[$route];
