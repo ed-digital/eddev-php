@@ -104,12 +104,12 @@
     static $cache = [];
 
     static function loadQueryFile($file) {
-      if (isset($cache[$file])) {
-        return $cache[$file];
+      if (isset(self::$cache[$file])) {
+        return self::$cache[$file];
       }
       if (file_exists($file)) {
-        $cache[$file] = file_get_contents($file);
-        return $cache[$file];
+        self::$cache[$file] = file_get_contents($file);
+        return self::$cache[$file];
       } else {
         return null;
       }
