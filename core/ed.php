@@ -23,6 +23,11 @@
         define('WPGRAPHQL_PLUGIN_URL', $this->themeURL.'/vendor/wp-graphql/wp-graphql/');
       }
 
+      // Disable GraphQL analysis, which slows down the site
+      add_filter('graphql_should_analyze_queries', function() {
+        return false;
+      });
+
       if ($this->isDev) {
         define('GRAPHQL_DEBUG', 1);
       }
