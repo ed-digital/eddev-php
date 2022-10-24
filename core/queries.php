@@ -41,10 +41,12 @@
     }
 
     static function handleQueryRequest($data) {
-      $cacheTime = @ED()->getCacheConfig()['queries'] ?? 0;
+      $cacheTime = @ED()->getCacheConfig()['queries'] ?? 300;
       if (!early_user_logged_in()) {
         if ((int)$cacheTime) {
           header('Cache-Control: public, max-age='.$cacheTime);
+        } else {
+          header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         }
         header('X-ED-Cache-Duration: '.(int)$cacheTime);
         header('X-ED-Generated-At: '.date("r"));
