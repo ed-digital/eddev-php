@@ -31,6 +31,13 @@
       //   return $settings;
       // });
 
+      add_action('admin_init', function() {
+        add_filter('the_post', function($post) {
+          $post->post_content = str_replace('"mode":"edit"', '"mode":"preview"', $post->post_content);
+          return $post;
+        });
+      });
+
       add_filter('allowed_block_types_all', function($types, $ctx) {
         // // Get the current template, if one exists.
         $post = $ctx->post;
