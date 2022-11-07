@@ -162,6 +162,10 @@
         });
       }, 1, 1);
 
+      add_action('wp_head', [$this, 'trackingHead']);
+      add_action('wp_body_open', [$this, 'trackingBody']);
+      add_action('wp_footer', [$this, 'trackingFooter']);
+
       EDTemplates::init();
       EDBlocks::init();
 
@@ -312,6 +316,18 @@
       }
     }
 
+    function trackingHead() {
+      $this->tracking("head");
+    }
+
+    function trackingBody() {
+      $this->tracking("body");
+    }
+
+    function trackingFooter() {
+      $this->tracking("footer");
+    }
+
     // Prints out tracking codes from ed.config.json
     function tracking($location) {
       $tracking = @$this->getConfig()['tracking'];
@@ -327,6 +343,34 @@
           })(window,document,'script','dataLayer',<?=json_encode($tracking->tagManagerID)?>);</script>
           <!-- End Google Tag Manager [ED] -->
           <?
+        }
+        if (@$tracking['ga']) {
+          $ga = @$tracking['ga'];
+          if ($ga['version'] == '3') {
+            ?>
+            <!-- Google tag (gtag.js) [ED] -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=<?=$ga['trackingID']?>"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+
+              gtag('config', '<?=$ga['trackingID']?>');
+            </script>
+            <?
+          } elseif ($ga['version'] == '4') {
+            ?>
+            <!-- Google tag (gtag.js) [ED] -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=<?=$ga['trackingID']?>"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+
+              gtag('config', '<?=$ga['trackingID']?>');
+            </script>
+            <?
+          }
         }
       } else if($location === "body") {
         if (@$tracking['tagManagerID']) {
