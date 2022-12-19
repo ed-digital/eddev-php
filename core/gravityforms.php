@@ -12,6 +12,10 @@
             'callback' => ['EDGravityForms', 'handleSubmit']
           ]);
         });
+
+        add_action('init', function() {
+          self::registerACFField();
+        });
       }
     }
 
@@ -48,12 +52,7 @@
           ],
         ],
         'resolve' => function($source, $args, $context, $info) {
-          $form = GFAPI::get_form($args['formId']);
-          unset($form['is_trash']);
-          unset($form['is_active']);
-          unset($form['date_created']);
-          unset($form['confirmations']);
-          unset($form['notifications']);
+          self::getFormByID($args['formId']);
           return [
             'form' => $form
           ];
@@ -61,6 +60,47 @@
       ]);
     }
 
+    static function registerACFField() {
+      // Register our ACF field type, as well as define how it should be treated via GraphQL
+      ED()->registerFieldType('gravity-form', [
+        'label' => 'Gravity Form (ED.)',
+        'type' => 'EDGravityFormData',
+        // Load the value from ACF, and ensure it's valid.
+        'loadValue' => function($value, $postID, $field) {
+          return $value;
+        },
+        // Using the ACF value (from $value), load a post object.
+        'resolve' => function($root, $args, $context, $info, $value) {
+          $formID = (int)$value;
+          if ($formID) {
+            return self::getFormByID($value);
+          } else {
+            return null;
+          }
+        },
+        'render' => function($field) {
+          $forms = GFAPI::get_forms();
+          ?>
+            <select name="<?=$field['name']?>">
+              <option value="">Choose a form</option>
+              <? foreach ($forms as $form): ?>
+                <option value="<?=$form['id']?>" <?=($form['id'] == $field['value']) ? 'selected' : ''?>><?=$form['title']?></option>
+              <? endforeach ?>
+            </select>
+          <?
+        }
+      ]);
+    }
+
+    static function getFormByID($formID) {
+      $form = GFAPI::get_form($formID);
+      unset($form['is_trash']);
+      unset($form['is_active']);
+      unset($form['date_created']);
+      unset($form['confirmations']);
+      unset($form['notifications']);
+      return $form;
+    }
 
     static function handleSubmit($data) {
       $payload = $data->get_json_params();

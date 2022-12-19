@@ -67,6 +67,7 @@
         $this->hooks['updateValue'] = @$args['updateValue'];
         $this->hooks['validate'] = @$args['validate'];
         $this->hooks['resolve'] = @$args['resolve'];
+        $this->hooks['render'] = @$args['render'];
         $this->hooks['renderSettings'] = @$args['renderSettings'];
 
         $this->graphqlTypeName = @$args['type'] ? $args['type'] : 'ED'.ucfirst(WPGraphQL\ACF\Config::camel_case($name.'_Field_Value'));
@@ -122,9 +123,13 @@
       }
 
       public function render_field($field) {
-        ?>
-          <input data-settings="<?=esc_attr(json_encode($field))?>" type="hidden" name="<?=$field['name']?>" value="<?=esc_attr(json_encode($field['value']))?>" />
-        <?
+        if ($this->hooks['render']) {
+          $this->hooks['render']($field);
+        } else {
+          ?>
+            <input data-settings="<?=esc_attr(json_encode($field))?>" type="hidden" name="<?=$field['name']?>" value="<?=esc_attr(json_encode($field['value']))?>" />
+          <?
+        }
       }
 
       public function render_field_settings($field) {
