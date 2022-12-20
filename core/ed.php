@@ -53,6 +53,8 @@
           echo "\n<script type=\"text/javascript\">window.SERVERLESS_ENDPOINT = ".json_encode($endpoint."/")."</script>\n";
         }
       });
+
+      add_action('admin_head', array($this, "_hookListingColumns"));
     }
 
     function getConfig() {
@@ -308,11 +310,27 @@
         throw new Error("Cannot register post type '$name' because it contains invalid characters, or is not all lowercase.");
       }
       register_post_type($name, $args);
+
+      if ($args['adminColumns']) {
+        // Save the columns to each post type
+        $this->postTypeColumns[$name] = $args['adminColumns'];
+      }
     }
 
     function registerFieldType($name, $args) {
       if (class_exists('EDACFField')) {
         return new EDACFField($name, $args);
+      }
+    }
+
+    public function _hookListingColumns() {
+      $postTypes = get_post_types();
+  
+      foreach($postTypes as $name => $label) {
+        $manager = new EDColumnManager($name, isset($this->postTypeColumns[$name]) ? $this->postTypeColumns[$name] : array());
+        $this->postTypeColumnManagers[$name] = $manager;
+        add_filter('manage_edit-'.$name.'_columns', array($manager, 'alterColumnLayout'), 16);
+        add_action('manage_'.$name.'_posts_custom_column', array($manager, 'printColumn'), 16);
       }
     }
 
