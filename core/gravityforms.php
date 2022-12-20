@@ -52,7 +52,7 @@
           ],
         ],
         'resolve' => function($source, $args, $context, $info) {
-          self::getFormByID($args['formId']);
+          $form = self::getFormByID($args['formId']);
           return [
             'form' => $form
           ];
