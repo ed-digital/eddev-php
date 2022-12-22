@@ -11,6 +11,10 @@
             'methods' => 'POST',
             'callback' => ['EDGravityForms', 'handleSubmit']
           ]);
+          register_rest_route('ed/v1', '/gf/submit-with-uploads', [
+            'methods' => 'POST',
+            'callback' => ['EDGravityForms', 'handleSubmitWithUploads']
+          ]);
         });
 
         add_action('init', function() {
@@ -106,6 +110,12 @@
       $payload = $data->get_json_params();
 
       $result = GFAPI::submit_form($payload['formID'], $payload['values']);
+
+      return $result;
+    }
+
+    static function handleSubmitWithUploads($data) {
+      $result = GFAPI::submit_form($_POST['formID'], $_POST['values']);
 
       return $result;
     }
