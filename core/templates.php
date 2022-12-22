@@ -119,7 +119,9 @@
           }, 3, 10);
           $redirection = Redirection::init();
           $redModule = $redirection->get_module();
-          $redModule->init();
+          if ($redModule) {
+            $redModule->init();
+          }
         }
 
 
