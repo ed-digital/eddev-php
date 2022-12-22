@@ -394,7 +394,7 @@
         if (@$tracking['tagManagerID']) {
           ?>
           <!-- Google Tag Manager (noscript) [ED] -->
-          <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?=$tracking->tagManagerID?>"
+          <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?=$tracking['tagManagerID']?>"
           height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <!-- End Google Tag Manager (noscript) [ED] -->
           <?
