@@ -276,6 +276,11 @@
         $postID = !empty($revisions) ? array_values($revisions)[0] : $postID;
       }
       $customRouteParams = Routes::getCustomRouteQueryVars();
+      if ($_POST['action'] == 'acf/ajax/fetch-block') {
+        if (!$postID) {
+          $postID = $_POST['post_id'];
+        }
+      }
       return array_merge(
         [
           'postId' => @$postID ?? $_POST['post_id'] ?? $_GET['id'],
