@@ -4,7 +4,7 @@
     static function setup() {
       add_action('current_screen', function() {
         $acf = acf_get_instance('ACF_Admin_Field_Groups');
-        if ($_GET['post']) {
+        if (@$_GET['post']) {
           $post = get_post($_GET['post']);
           if ($post->post_type == 'acf-field-group') {
             $acf->setup_sync();
