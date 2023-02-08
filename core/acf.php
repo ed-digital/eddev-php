@@ -73,7 +73,7 @@
         $this->graphqlTypeName = @$args['type'] ? $args['type'] : 'ED'.ucfirst(WPGraphQL\ACF\Config::camel_case($name.'_Field_Value'));
 
         // Register object type?
-        if ($args['objectType']) {
+        if (@$args['objectType']) {
           register_graphql_object_type($this->graphqlTypeName, $args['objectType']);
         }
 

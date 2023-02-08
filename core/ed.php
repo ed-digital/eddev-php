@@ -311,7 +311,7 @@
       }
       register_post_type($name, $args);
 
-      if ($args['adminColumns']) {
+      if (@$args['adminColumns']) {
         // Save the columns to each post type
         $this->postTypeColumns[$name] = $args['adminColumns'];
       }

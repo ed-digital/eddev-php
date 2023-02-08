@@ -107,7 +107,7 @@
         // Test for a redirect, via the Redirection plugin
         if (class_exists('Redirection')) {
           add_action('redirection_last', function($mod, $items, $redirect) {
-            if ($redirect[0]) {
+            if (@$redirect[0]) {
               $url = $redirect[0]->get_action_data();
               $code = $redirect[0]->get_action_code();
               echo json_encode([
@@ -276,7 +276,7 @@
         $postID = !empty($revisions) ? array_values($revisions)[0] : $postID;
       }
       $customRouteParams = Routes::getCustomRouteQueryVars();
-      if ($_POST['action'] == 'acf/ajax/fetch-block') {
+      if (@$_POST['action'] == 'acf/ajax/fetch-block') {
         if (!$postID) {
           $postID = $_POST['post_id'];
         }
