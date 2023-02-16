@@ -115,7 +115,7 @@
     }
 
     static function handleSubmitWithUploads($data) {
-      $result = GFAPI::submit_form($_POST['formID'], $_POST['values']);
+      $result = GFAPI::submit_form($_POST['formID'], @$_POST['values']);
 
       return $result;
     }
