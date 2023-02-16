@@ -389,7 +389,7 @@
 
       QueryMonitor::push($queryFile, "block");
       $params = EDTemplates::getQueryParams();
-      if (!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
+      if (@!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
       BlockQLRoot::setContext($attributes);
       $result = graphql([
         'query' => $contents . FragmentLoader::getAll(),
