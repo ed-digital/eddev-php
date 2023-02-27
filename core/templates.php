@@ -250,7 +250,7 @@
           $inner = $el->nodeValue;
           if ($inner !== '') {
             if ($tagName === 'title') {
-              $attributes['__code'] = trim(preg_replace("/\n.+$/m", "", $inner));
+              $attributes['__code'] = utf8_decode(trim(preg_replace("/\n.+$/m", "", $inner)));
             } else {
               $attributes['__code'] = $inner;
             }
