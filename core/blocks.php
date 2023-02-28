@@ -514,7 +514,7 @@
 
     public function groupBlocks($blocks) {
       foreach ($blocks as $block) {
-        $target = EDBlocks::$blockGroupTargets[$block['blockName']];
+        $target = @EDBlocks::$blockGroupTargets[$block['blockName']];
         if ($target !== $this->currentTarget) {
           if ($this->currentTarget) {
             $this->finalizeGroup();

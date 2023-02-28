@@ -21,7 +21,7 @@
     static function registerRoute($pattern, $args) {
       $key = md5($pattern);
       $uri = 'index.php?custom_route='.$key;
-      if ($args['queryVars']) {
+      if (@$args['queryVars']) {
         foreach ($args['queryVars'] as $i => $var) {
           if (preg_match("/^\\$[0-9]+/", $var)) {
             $matchIndex = substr($var, 1);
