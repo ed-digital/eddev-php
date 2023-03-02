@@ -22,7 +22,7 @@
       $key = md5($pattern);
       $uri = 'index.php?custom_route='.$key;
       if (@$args['queryVars']) {
-        foreach ($args['queryVars'] as $i => $var) {
+        foreach (@$args['queryVars'] as $i => $var) {
           if (preg_match("/^\\$[0-9]+/", $var)) {
             $matchIndex = substr($var, 1);
             $uri .= '&match_'.$matchIndex.'=$matches['.$matchIndex.']';
@@ -45,8 +45,8 @@
     static function getCustomRouteQueryVars() {
       $args = @self::$routes[get_query_var('custom_route')];
       $vars = [];
-      if ($args && $args['queryVars']) {
-        foreach ($args['queryVars'] as $key => $var) {
+      if ($args && @$args['queryVars']) {
+        foreach (@$args['queryVars'] as $key => $var) {
           if (preg_match("/^\\$[0-9]+/", $var)) {
             $matchIndex = substr($var, 1);
             $vars[$key] = get_query_var('match_'.$matchIndex);
