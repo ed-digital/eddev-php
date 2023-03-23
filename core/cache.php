@@ -45,8 +45,3 @@
       return $result;
     }
   }
-
-  if ($_GET['test-http-server']) {
-    dump($_SERVER['HTTP_HOST']);
-    exit;
-  }

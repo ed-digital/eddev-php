@@ -45,13 +45,15 @@
           '196x196'
         ]
       ];
-      $path = str_replace(ED()->siteURL, "", ED()->themeURL)."/assets/favicon/";
-      foreach ($icons as $rel => $names) {
-        foreach ($names as $name) {
-          @preg_match("/[0-9]+x[0-9]+/", $name, $match);
-          $size = @$match[0];
-          $url = $path.$name.".png";
-          $lines[] = "<link rel=\"{$rel}\" href=\"{$url}\" sizes=\"{$size}\">";
+      if (file_exists(ED()->themePath . "/assets/favicon/120x120.png")) {
+        $path = str_replace(ED()->siteURL, "", ED()->themeURL)."/assets/favicon/";
+        foreach ($icons as $rel => $names) {
+          foreach ($names as $name) {
+            @preg_match("/[0-9]+x[0-9]+/", $name, $match);
+            $size = @$match[0];
+            $url = $path.$name.".png";
+            $lines[] = "<link rel=\"{$rel}\" href=\"{$url}\" sizes=\"{$size}\">";
+          }
         }
       }
       return $lines;
