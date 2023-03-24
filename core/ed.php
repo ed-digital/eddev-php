@@ -28,6 +28,12 @@
         return false;
       });
 
+      // Disable limit of number of posts returned by GraphQL
+      // This would normally be a security risk, but we don't allow direct GraphQL access.
+      add_filter('graphql_connection_max_query_amount', function() {
+        return 9999;
+      }, 10, 0);
+
       if ($this->isDev) {
         define('GRAPHQL_DEBUG', 1);
       }
