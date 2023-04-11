@@ -33,10 +33,10 @@
 
   // Caches GraphQL queries
   function cached_graphql($args, $cacheTime = 0) {
-    if (early_user_logged_in() || $cacheTime === 0) return graphql($args);
     $key = md5(@$_SERVER['HTTP_HOST']."_".json_encode($args));
     $cache = EDCache::withKey($key);
-    if ($cache->hasValue()) {
+    $ignoreCache = early_user_logged_in() || $cacheTime === 0;
+    if ($cache->hasValue() && !$ignoreCache) {
       return $cache->getValue();
     } else {
       $result = graphql($args);
