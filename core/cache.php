@@ -41,7 +41,7 @@
     $cache = EDCache::withKey($key);
     // If the user is logged in, or the cache time is 0, clear the cache and return a fresh result
     if (early_user_logged_in() || $cacheTime === 0) {
-      $cache::clear();
+      $cache->clear();
       return graphql($args);
     }
     if ($cache->hasValue()) {
