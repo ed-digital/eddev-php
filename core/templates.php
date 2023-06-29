@@ -253,9 +253,11 @@
               // $inner = str_replace('⋆', "&centerdot;", $inner);
               // $title = utf8_decode(trim(preg_replace("/\n.+$/m", "", $inner)));
               // $title = $inner;
-              $inner = str_replace('⋆', "&centerdot;", $inner);
+              $inner = str_replace('⋆', "_dotstar_", $inner);
+              $inner = str_replace('•', "_bullet_", $inner);
               $title = mb_convert_encoding($inner, 'ISO-8859-1', 'UTF-8');
-              $title = str_replace("&centerdot;", "⋆", $title);
+              $title = str_replace("_dotstar_", "⋆", $title);
+              $title = str_replace("_bullet_", "•", $title);
               $attributes['__code'] = $title;
             } else {
               $attributes['__code'] = $inner;
