@@ -37,8 +37,6 @@
 
   // Caches GraphQL queries
   function cached_graphql($args, $cacheTime = 0) {
-    return graphql($args);
-
     $key = md5(@$_SERVER['HTTP_HOST']."_".json_encode($args));
     $cache = EDCache::withKey($key);
     // If the user is logged in, or the cache time is 0, clear the cache and return a fresh result
