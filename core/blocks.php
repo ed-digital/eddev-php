@@ -82,6 +82,7 @@
 
       foreach ($files as $file) {
         $meta = self::extractMetadata($file);
+        if (!$meta) continue;
         $meta['supports']['jsx'] = true;
         $meta['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
         acf_register_block_type($meta);
@@ -168,7 +169,8 @@
       
       // Ensure the header comment is set
       if (!preg_match("/^\/\*.+?\*\//s", $contents, $matches)) {
-        throw new Error("The block file '".str_replace(ED()->themePath, "", $file)."' does not contain a valid comment header.");
+        return null;
+        // throw new Error("The block file '".str_replace(ED()->themePath, "", $file)."' does not contain a valid comment header.");
       }
 
       // Pre-parse the comment into simple key/values
@@ -372,7 +374,7 @@
 
     public static function runBlockQuery($meta, $attributes) {
       $cacheKey = null;
-      $queryFile = ED()->themePath . "/blocks/" . $meta['id'] . ".graphql";
+      $queryFile = ED()->themePath . "/blocks/" . @$meta['id'] . ".graphql";
       $contents = QueryLoader::loadQueryFile($queryFile);
       if (!$contents) return;
 
@@ -442,7 +444,7 @@
     public function processSingleBlock($block) {
       if (strpos($block['blockName'], "acf/") === 0) {
         // ACF blocks should have their 
-        $meta = EDBlocks::$blocks[$block['blockName']];
+        $meta = @EDBlocks::$blocks[$block['blockName']];
         // $attrs = [
         //   'id' => $block['attrs']['id'],
         //   'data' => []

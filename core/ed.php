@@ -53,6 +53,8 @@
       $this->enableDevUI();
       $this->enableDevReact();
 
+      edDisableComments();
+
       add_action('wp_head', function() {
         $endpoint = $this->getServerlessEndpoint();
         if ($endpoint) {
@@ -241,7 +243,7 @@
 
     private function updateGraphQLConfigFile() {
       $contents = json_encode([
-        "schemaPath" => "schema.json",
+        "schema" => "schema.json",
         "extensions" => [
           "endpoints" => [
             "default" => [
