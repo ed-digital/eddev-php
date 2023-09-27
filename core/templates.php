@@ -263,7 +263,10 @@
               $attributes['__code'] = $inner;
             }
           }
-          $output[$tagName][] = $attributes;
+          $attributes = apply_filters('eddev/serverless-header-tag', $tagName, $attributes);
+          if ($attributes) {
+            $output[$tagName][] = $attributes;
+          }
         }
       }
       
