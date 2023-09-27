@@ -109,9 +109,10 @@
           add_action('redirection_last', function($mod, $items, $redirect) {
             if (@$redirect[0]) {
               $url = $redirect[0]->get_action_data();
+              $data = unserialize($url);
               $code = $redirect[0]->get_action_code();
               echo json_encode([
-                "redirect" => $url,
+                "redirect" => $data['url_from'],
                 "code" => $code
               ]);
               exit;
