@@ -230,7 +230,7 @@
       if (!$html) return [];
       $data = new DOMDocument();
       $data->loadHTML(
-        $html,
+        "<!DOCTYPE html><html>".$html."</html>",
         LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
       );
 
