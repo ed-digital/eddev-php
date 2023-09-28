@@ -106,7 +106,15 @@
 
         // Test for a redirect, via the Redirection plugin
         if (class_exists('Redirection')) {
-          add_action('redirection_last', function($mod, $items, $redirect) {
+          add_action('redirection_matched', function($mod, $items, $redirect) {
+            if ($_GET['debug']) {
+              dump("redirection_matched", [
+                "mod" => $mod,
+                "items" => $items,
+                "redirect" => $redirect
+              ]);
+              exit;
+            }
             if (@$redirect[0]) {
               $url = $redirect[0]->get_action_data();
               $data = unserialize($url);
