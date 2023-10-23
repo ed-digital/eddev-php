@@ -238,7 +238,7 @@
       if (!$html) return [];
       $data = new DOMDocument();
       @$data->loadHTML(
-        "<!DOCTYPE html><html>".$html."</html>",
+        "<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />".$html."</head></html>",
         LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
       );
 
@@ -258,21 +258,21 @@
           }
           $inner = $el->nodeValue;
           if ($inner !== '') {
-            if ($tagName === 'title') {
-              // $inner = str_replace('⋆', "&centerdot;", $inner);
-              // $title = utf8_decode(trim(preg_replace("/\n.+$/m", "", $inner)));
-              // $title = $inner;
-              $inner = str_replace('⋆', "_dotstar_", $inner);
-              $inner = str_replace('•', "_bullet_", $inner);
-              $title = mb_convert_encoding($inner, 'ISO-8859-1', 'UTF-8');
-              $title = str_replace("_dotstar_", "⋆", $title);
-              $title = str_replace("_bullet_", "•", $title);
-              $attributes['__code'] = $title;
-            } else {
-              $attributes['__code'] = $inner;
+            $attributes['__code'] = $inner;
+          }
+
+          // Ignore wp-includes scripts and styles
+          if ($tagName === 'link' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$attributes["href"])) {
+            continue;
+          } else if ($tagName === 'script' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$attributes["src"])) {
+            continue;
+          } else if ($tagName === 'meta') {
+            if (@$attributes['name'] === "generator") {
+              continue;
             }
           }
-          $attributes = apply_filters('eddev/serverless-header-tag', $tagName, $attributes);
+
+          $attributes = apply_filters('eddev/serverless-header-tag', $attributes, $tagName);
           if ($attributes) {
             $output[$tagName][] = $attributes;
           }
