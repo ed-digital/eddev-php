@@ -298,13 +298,11 @@
         return;
       }
 
+      // Track block field groups
+      $blockFieldConfigs = [];
+
       // Loop over each field group
       foreach ($field_groups as $field_group) {
-
-        // $field_group_name = isset( $field_group['graphql_field_name'] ) ? $field_group['graphql_field_name'] : $field_group['title'];
-        // $field_group_name = Utils::format_field_name( $field_group_name );
-
-        // $manually_set_graphql_types = isset( $field_group['map_graphql_types_from_location_rules'] ) ? (bool) $field_group['map_graphql_types_from_location_rules'] : false;
 
         $blockNames = [];
         foreach ($field_group['location'] as $ruleset) {
@@ -324,34 +322,41 @@
 
           if (!$block) continue;
 
-          /**
-           * Prepare default info
-           */
           $field_name = $block['graphql_field_name'];
           $field_group['type'] = 'group';
           $field_group['name'] = $field_name;
-          $config              = [
-            'name'            => $field_name,
-            'acf_field'       => $field_group,
-            'acf_field_group' => null,
-            'resolve'         => function ( $root ) use ( $field_group ) {
-              return isset( $root ) ? $root : null;
-            }
-          ];
+          $field_group['sub_fields'] = acf_get_fields($field_group['key']);
+          if (!isset($blockFieldConfigs[$blockName])) {
+            $config              = [
+              'name'            => $field_name,
+              'acf_field'       => $field_group,
+              'acf_field_group' => null,
+              'resolve'         => function ( $root ) use ( $field_group ) {
+                return isset( $root ) ? $root : null;
+              }
+            ];
+            $config['acf_field']['graphql_types'] = ['CurrentBlock'];
+            $config['acf_field']['name'] = $field_name;
+            $config['acf_field']['graphql_field_name'] = $field_name;
+            $config['acf_field']['show_in_graphql'] = 1;
 
-          $config['acf_field']['graphql_types'] = ['CurrentBlock'];
-          $config['acf_field']['name'] = $field_name;
-          $config['acf_field']['graphql_field_name'] = $field_name;
-          $config['acf_field']['show_in_graphql'] = 1;
-
-          $qualifier = "Fields defined in the \"".$field_group['title']."\" field type";
-          $config['description'] = $field_group['description'] ? $field_group['description'] . ' | ' . $qualifier : $qualifier;
-
-          $this->register_graphql_field("CurrentBlock", $field_name, $config);
-          
+            $qualifier = "Fields defined in the \"".$field_group['title']."\" field type";
+            $config['description'] = $field_group['description'] ? $field_group['description'] . ' | ' . $qualifier : $qualifier;
+            $blockFieldConfigs[$blockName] = $config;
+          } else {
+            $blockFieldConfigs[$blockName]['acf_field']['sub_fields'] = array_merge(
+              $blockFieldConfigs[$blockName]['acf_field']['sub_fields'] ?? [],
+              acf_get_fields($field_group)
+            );
+          }
         }
       }
-  
+
+      foreach ($blockFieldConfigs as $blockKey => $config) {
+        $field_name = $config['name'];
+        $this->register_graphql_field("CurrentBlock", $field_name, $config);
+      }
+ 
     }
 
 
