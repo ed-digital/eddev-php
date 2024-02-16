@@ -190,16 +190,18 @@
       }
 
       add_filter('admin_enqueue_scripts', function() {
-        wp_enqueue_script(
-          'theme_admin_js',
-          $this->themeURL.'/dist/admin/main.admin.js',
-          get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
-          filemtime(ED()->themePath.@$style)
-        );
-        $style = "/dist/admin/main.css";
-        if (file_exists(ED()->themePath.$style)) {
-          wp_enqueue_style('theme_admin_css', ED()->themeURL.$style, [], filemtime(ED()->themePath.$style));
+        $jsFile = '/dist/admin/main.admin.js';
+        if (file_exists(ED()->themePath.@$jsFile)) {
+          wp_enqueue_script(
+            'theme_admin_js',
+            $this->themeURL.$jsFile,
+            get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
+            filemtime(ED()->themePath.@$jsFile)
+          );
         }
+        // if (file_exists(ED()->themePath.$style)) {
+        //   wp_enqueue_style('theme_admin_css', ED()->themeURL.$style, [], filemtime(ED()->themePath.$style));
+        // }
       });
 
       add_action('enqueue_block_editor_assets', function() {
@@ -293,7 +295,7 @@
       $siteURL = $this->siteURL;
       if (strpos($siteURL, ".local") > 0) {
         // Prefer http when using local! Avoids issues with SSL
-        $siteURL = str_replace("https", "http", $siteURL);
+        // $siteURL = str_replace("https", "http", $siteURL);
       }
       $values = [
         'DEBUG_GRAPHQL_URL' => $siteURL."/graphql",

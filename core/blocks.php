@@ -460,10 +460,14 @@
         //     $attrs['data'][$key] = $val;
         //   }
         // }
+        AssetManifest::importChunk("blocks/".$meta['id'].".tsx", 'modulepreload');
         $block['props'] = $this->runBlockQuery($meta, $block['attrs']);
         $block['inline'] = @$block['attrs']['inline'];
         $block['rule'] = 'react';
         unset($block['wpClassName']);
+        unset($block['attrs']);
+        unset($block['innerContent']);
+        unset($block['innerHTML']);
         return $block;
       } else {
         $rule = $this->rules[$block['blockName']];

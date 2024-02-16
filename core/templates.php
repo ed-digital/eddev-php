@@ -133,61 +133,61 @@
           }
         }
 
-
+        AssetManifest::setup($_GET['_ssr'] == "1");
+        AssetManifest::importChunk("virtual:eddev-bootup", "main");
+        
         QueryMonitor::push($cleanedTemplateName, 'template');
         
-        // Fetch the data
+        // Generate the data
         $data = [
           'view' => str_replace(".tsx", "", $cleanedTemplateName),
           'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
         ];
-        $templateBundle = "";
         $data['viewData'] = self::getDataForTemplate($template);
         if (!$isPropsRequest || $_GET['_props'] === 'all') {
+          AssetManifest::importChunk("views/_app.tsx", "modulepreload");
           $data['appData'] = self::getDataForApp();
         }
         if ($isJSX) {
           $data['viewType'] = 'react';
-          $templateBundle = "/dist/frontend/".preg_replace("/[^0-9A-Z]/i", "-", $cleanedTemplateName).".frontend.js";
+          AssetManifest::importChunk($cleanedTemplateName, "modulepreload");
         } else {
           ob_start();
           include($template);
           $data['viewType'] = 'html';
-          $data['view'] = 'views/_html.tsx';
+          $data['view'] = 'views/_html';
+          AssetManifest::importChunk("views/_html.tsx", "modulepreload");
           $data['viewData']['data']['template'] = $template;
           $data['viewData']['data']['htmlContent'] = ob_get_contents();
           ob_end_clean();
         }
 
-        $_scripts = "";
-        $_styles = "";
-
-        if (file_exists(ED()->themePath."/dist/frontend/main.css")) {
-          $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
-        }
+        // if (file_exists(ED()->themePath."/dist/frontend/main.css")) {
+        //   $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL."/dist/frontend/main.css\">\n";
+        // }
 
         // Preload each template
-        $templates = glob(ED()->themePath."/dist/frontend/view*.js");
-        foreach ($templates as $template) {
-          $isCurrentTemplate = ED()->themePath.$templateBundle === $template;
-          $async = $isCurrentTemplate ? '' : 'async';
-          $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion($template) . "\"></script>\n";
-        }
-        if ($templateBundle) {
-          $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
-          if (file_exists(ED()->themePath.$cssFile)) {
-            $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
-          }
-        }
+        // $templates = glob(ED()->themePath."/dist/frontend/view*.js");
+        // foreach ($templates as $template) {
+        //   $isCurrentTemplate = ED()->themePath.$templateBundle === $template;
+        //   $async = $isCurrentTemplate ? '' : 'async';
+        //   $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion($template) . "\"></script>\n";
+        // }
+        // if ($templateBundle) {
+        //   $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
+        //   if (file_exists(ED()->themePath.$cssFile)) {
+        //     $_styles .= "<link rel=\"stylesheet\" type=\"text/css\" media=\"all\" href=\"" . ED()->themeURL.$cssFile."\">\n";
+        //   }
+        // }
 
-        $extras = array_merge(glob(ED()->themePath."/dist/frontend/*ContentBlocks*.js"), glob(ED()->themePath."/dist/frontend/vendors*.js"));
-        foreach ($extras as $script) {
-          if ($script !== ED()->themePath.$templateBundle) {
-            $_scripts .= "<script type=\"text/javascript\" src=\"" . self::appendFileVersion($script) . "\"></script>\n";
-          }
-        }
+        // $extras = array_merge(glob(ED()->themePath."/dist/frontend/*ContentBlocks*.js"), glob(ED()->themePath."/dist/frontend/vendors*.js"));
+        // foreach ($extras as $script) {
+        //   if ($script !== ED()->themePath.$templateBundle) {
+        //     $_scripts .= "<script type=\"text/javascript\" src=\"" . self::appendFileVersion($script) . "\"></script>\n";
+        //   }
+        // }
 
-        $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
+        // $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
 
         // if (@$data['errorStack'] && @count($data['errorStack']) == 0) {
         //   unset($data['errorStack']);
@@ -200,7 +200,8 @@
           echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
           exit;
         } else {
-          $_content = "<script>window._PAGE_DATA = ".json_encode($data, JSON_PRETTY_PRINT)."</script>";
+          $_preload = AssetManifest::collectTags();
+          $_content = "<script>window._PAGE_DATA = ".json_encode($data)."</script>".AssetManifest::collectMainTag();
           include(ED()->themePath."/index.php");
         }
         exit;
