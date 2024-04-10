@@ -466,7 +466,7 @@
         unset($block['wpClassName']);
         return $block;
       } else {
-        $rule = $this->rules[$block['blockName']];
+        $rule = @$this->rules[$block['blockName']];
         if ($rule === 'render') {
           $block['innerHTML'] = apply_filters('the_content', render_block($block));
           unset($block['innerBlocks']);
