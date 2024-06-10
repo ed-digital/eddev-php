@@ -69,6 +69,7 @@
         }
 
         $allowedBlocks[] = 'core/list-item';
+        $allowedBlocks[] = "core/block";
     
         return $allowedBlocks;
       }, 2, 3);
