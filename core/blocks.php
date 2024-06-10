@@ -449,24 +449,15 @@
 
     public function processSingleBlock($block) {
       if (strpos($block['blockName'], "acf/") === 0) {
-        // ACF blocks should have their 
+        // ACF blocks
         $meta = @EDBlocks::$blocks[$block['blockName']];
-        // $attrs = [
-        //   'id' => $block['attrs']['id'],
-        //   'data' => []
-        // ];
-        // foreach ($block['attrs']['data'] as $key => $val) {
-        //   if (strpos($key, "_") === 0) {
-        //     $attrs['data'][$val] = $block['attrs']['data'][substr($key, 1)];
-        //     $attrs['data'][$key] = $val;
-        //   }
-        // }
         $block['props'] = $this->runBlockQuery($meta, $block['attrs']);
         $block['inline'] = @$block['attrs']['inline'];
         $block['rule'] = 'react';
         unset($block['wpClassName']);
         return $block;
       } else {
+        // Some kind of core or plugin block
         $rule = @$this->rules[$block['blockName']];
         if ($rule === 'render') {
           $block['innerHTML'] = apply_filters('the_content', render_block($block));
@@ -482,6 +473,24 @@
     }
 
     public function processBlocks($blocks) {
+      // Expand pattern blocks
+      $expanded = [];
+      foreach ($blocks as $block) {
+        if ($block['blockName'] === 'core/block') {
+          $patternId = $block['attrs']['ref'];
+          $post = get_post($patternId);
+          if ($post) {
+            $patternBlocks = parse_blocks($post->post_content);
+            foreach ($patternBlocks as $patternBlock) {
+              $expanded[] = $patternBlock;
+            }
+          }
+        } else {
+          $expanded[] = $block;
+        }
+      }
+      $blocks = $expanded;
+
       // Filter out empty blocks
       $blocks = array_filter($blocks, function($block) {
         if (!$block['blockName'] && preg_match("/^\s*$/", $block['innerHTML'])) {
