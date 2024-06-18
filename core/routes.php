@@ -65,8 +65,8 @@
       wp_reset_query();
       $route = get_query_var('custom_route');
       if ($route) {
-        $args = self::$routes[$route];
-        if ($args['template']) {
+        $args = @self::$routes[$route];
+        if (isset($args) && $args['template']) {
           return ED()->themePath."/".$args['template'];
         }
       }

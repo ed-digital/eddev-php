@@ -5,6 +5,13 @@
 
     private $config;
 
+    public $themeURL = "";
+    public $themePath = "";
+    public $siteURL = "";
+    public $sitePath = "";
+    public $selfPath = "";
+    public $isDev = false;
+
     public $views = [];
 
     static function boot() {
@@ -68,6 +75,10 @@
       });
 
       add_action('admin_head', array($this, "_hookListingColumns"));
+    }
+
+    function isDevProxy() {
+      return isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
     }
 
     function getConfig() {
@@ -187,17 +198,78 @@
       if ($this->isDev) {
         // Automatically update the .env file with debugging info
         $this->updateDevFiles();
+        EDSiteInfo::init();
+      }
+
+      if (ED()->isDevProxy()) {
+        add_action('admin_head', function() {
+          // Add Vite HMR info
+          ?>
+          <script type="module">
+            import RefreshRuntime from "/@react-refresh"
+            RefreshRuntime.injectIntoGlobalHook(window)
+            window.$RefreshReg$ = () => {}
+            window.$RefreshSig$ = () => (type) => type
+            window.__vite_plugin_react_preamble_installed__ = true
+            window.__wp_admin = true
+          </script>
+
+          <script type="module" src="/@vite/client"></script>
+          <!-- <script type="module" blocking src="/@id/global-react"></script>
+          <script type="module" blocking src="/@id/global-react-dom"></script> -->
+          <?
+        });
+
+        add_action('admin_footer', function() {
+          ?>
+            <script type="module" src="/_boot_admin.js"></script>
+          <?
+        });
+
+        // add_filter('admin_enqueue_scripts', function() {
+        //   wp_deregister_script('react');
+        //   wp_register_script('react', '/global-react.js', [], '', [
+        //     'type' => 'module'
+        //   ]);
+        // }, 1000);
+
+        add_filter('script_loader_tag', function($tag, $handle, $src) {
+          if ($handle === 'react') {
+            // return "";
+            // return "<script type='module' src=\"/node_modules/.vite/deps/chunk-6NLOLHO3.js?v=fbc7fbaa\"></script><script type='module'>window.React = require_react();</script>";
+          } else if ($handle === 'react-dom') {
+            // return "";
+            // return "<script type='module' src=\"/global-react-dom.js\"></script>";
+          }
+          // } else {
+          //   return str_replace("<script ", "<script defer ", $tag);
+          // }
+          return $tag;
+        }, 10, 3);
       }
 
       add_filter('admin_enqueue_scripts', function() {
-        $jsFile = '/dist/admin/main.admin.js';
-        if (file_exists(ED()->themePath.@$jsFile)) {
-          wp_enqueue_script(
-            'theme_admin_js',
-            $this->themeURL.$jsFile,
-            get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
-            filemtime(ED()->themePath.@$jsFile)
-          );
+        
+        // The dependencies to enqueue, depending on whether the block editor is on this page
+        $deps = get_current_screen()->is_block_editor()
+          ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf']
+          : ['acf', 'react', 'react-dom', 'wp-hooks'];
+
+        if (ED()->isDevProxy()) {
+          // If the dev proxy is currently being used, just enqueue the deps
+          foreach ($deps as $dep) {
+            wp_enqueue_script($dep);
+          }
+        } else {
+          $jsFile = '/dist/admin/main.admin.js';
+          if (file_exists(ED()->themePath.@$jsFile)) {
+            wp_enqueue_script(
+              'theme_admin_js',
+              $this->themeURL.$jsFile,
+              get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
+              filemtime(ED()->themePath.@$jsFile)
+            );
+          }
         }
         // if (file_exists(ED()->themePath.$style)) {
         //   wp_enqueue_style('theme_admin_css', ED()->themeURL.$style, [], filemtime(ED()->themePath.$style));
@@ -295,7 +367,7 @@
       $siteURL = $this->siteURL;
       if (strpos($siteURL, ".local") > 0) {
         // Prefer http when using local! Avoids issues with SSL
-        // $siteURL = str_replace("https", "http", $siteURL);
+        $siteURL = str_replace("http:", "https:", $siteURL);
       }
       $values = [
         'DEBUG_GRAPHQL_URL' => $siteURL."/graphql",
@@ -351,6 +423,15 @@
 
     function trackingHead() {
       $this->tracking("head");
+    }
+
+    /**
+     * Creates a MySQL database table, and ensures it's kept up to date with the latest changes.
+     * @param string $id A unique identifier for this migration. It can be the table name, or any other unique string. Changing the string will re-run the migration
+     * @param string $createStatement A MySQL 'CREATE TABLE' statement.
+     */
+    function ensureTable($id, $createStatement) {
+      EDDBMigrationManager::ensureDatabaseTable($id, $createStatement);
     }
 
     function trackingBody() {
@@ -418,7 +499,7 @@
     }
   }
 
-  function ED() {
+  function ED(): EDCore {
     if (EDCore::$instance) {
       return EDCore::$instance;
     } else {

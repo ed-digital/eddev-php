@@ -20,16 +20,16 @@
         wp_add_inline_script('wp-block-editor', "window.ED_BLOCK_TAGS = " . json_encode(self::$coreBlockTags), 'after');
       });
 
-      // add_action('block_editor_settings_all', function($settings) {
-      //   $settings['blockTags'] = self::$coreBlockTags;
-      //   // $blocks = WP_Block_Type_Registry::get_instance()->get_all_registered();
-      //   // foreach ($blocks as $block) {
-      //   //   if (self::$coreBlockTags[$block->name]) {
-      //   //     $block->tags = self::$coreBlockTags[$block->name];
-      //   //   }
-      //   // }
-      //   return $settings;
-      // });
+      add_filter('block_categories_all', function($categories) {
+        $categories[] = array(
+          'slug' => 'layouts',
+          'title' => 'Layout',
+          'icon' => ''
+        );
+        // dump($categories);
+        // exit;
+        return $categories;
+      });
 
       add_action('admin_init', function() {
         add_filter('the_post', function($post) {
@@ -78,15 +78,14 @@
       if (!function_exists("acf_register_block_type")) {
         return;
       }
-      $files = glob(ED()->themePath."/blocks/**/*.tsx");
 
-      foreach ($files as $file) {
-        $meta = self::extractMetadata($file);
-        if (!$meta) continue;
-        $meta['supports']['jsx'] = true;
-        $meta['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
-        acf_register_block_type($meta);
-        self::$blocks['acf/'.$meta['name']] = $meta;
+      $themeInfo = EDThemeInfo::load();
+
+      foreach ($themeInfo['blocks'] as $block) {
+        $block['supports']['jsx'] = true;
+        $block['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
+        acf_register_block_type($block);
+        self::$blocks[$block['acfName']] = $block;
       }
 
     }
@@ -104,15 +103,15 @@
     }
 
     static function templateLock($lock) {
-      if ($lock['type']) {
+      if (@$lock['type']) {
         add_action('admin_init', function() use($lock) {
           $postType = get_post_type_object($lock['type']);
           $postType->template = $lock['content'];
           $postType->template_lock = 'all';
         });
-      } else if ($lock['template']) {
+      } else if (@$lock['template']) {
         add_filter('block_editor_settings', function($settings, $post) use($lock) {
-          if ($post->post_type === $lock['type']) {
+          if ($post->post_type === @$lock['type']) {
             $settings['template'] = $lock['content'];
             $settings['template_lock'] = 'all';
           } else if ($post->post_type === "page" && $lock['template']) {
@@ -164,68 +163,6 @@
       return implode("_", $parts);
     }
 
-    static function extractMetadata($file) {
-      $contents = file_get_contents($file);
-      
-      // Ensure the header comment is set
-      if (!preg_match("/^\/\*.+?\*\//s", $contents, $matches)) {
-        return null;
-        // throw new Error("The block file '".str_replace(ED()->themePath, "", $file)."' does not contain a valid comment header.");
-      }
-
-      // Pre-parse the comment into simple key/values
-      $lines = explode("\n", $contents);
-      $comment = [
-        'name' => str_replace(ED()->themePath."/blocks/", "", str_replace(".tsx", "", $file))
-      ];
-      foreach ($lines as $line) {
-        if (preg_match("/\s*\*?\s*([^:]+):\s*(.+)\s*/", $line, $matches)) {
-          $key = strtolower($matches[1]);
-          $value = $matches[2];
-          if (!@$comment[$key]) {
-            $comment[$key] = $value;
-          }
-        }
-      }
-
-      // Convert into an acf_register_post_type compatible array
-      $id = str_replace(ED()->themePath."/blocks/", "", str_replace(".tsx", "", $file));
-
-      $templates = @$comment['templates'] ? preg_split("/[,\s]+/", $comment['templates']) : [];
-      if (count($templates) === 0) {
-        $templates = null;
-        // $templates = ['default'];
-      }
-
-      return [
-        'id' => $id,
-        'name' => preg_replace("/[^a-z0-9-]+/i", "-", @$comment['name']),
-        'graphql_field_name' => self::blockFieldName($id),
-        'title' => @$comment['title'],
-        'description' => @$comment['description'],
-        'keywords' => @$comment['keywords'],
-        'category' => @$comment['category'],
-        'icon' => @$comment['icon'],
-        'post_types' => preg_split("/[,\s]+/", @$comment['types']),
-        'mode' => @$comment['mode'] ?? 'preview',
-        'align' => @$comment['align'],
-        'align_text' => @$comment['align text'],
-        'align_content' => @$comment['align content'],
-        'templates' => $templates,
-        'tags' => preg_split("/[,\s]+/", @$comment['tags']),
-        'childTags' => preg_split("/[,\s]+/", @$comment['child tags']),
-        "canCache" => self::parseBoolOrString(@$comment['cache'], false),
-        'supports' => [
-          "align" => self::parseBoolOrString(@$comment['supports align'], false),
-          "align_text" => self::parseBoolOrString(@$comment['supports align text'], false),
-          "align_content" => self::parseBoolOrString(@$comment['supports align content'], false),
-          "full_height" => self::parseBoolOrString(@$comment['supports full height'], false),
-          "mode" => self::parseBoolOrString(@$comment['supports auto'], true),
-          "multiple" => self::parseBoolOrString(@$comment['supports multiple'], false),
-        ]
-      ];
-    }
-
     protected static function parseBoolOrString($str, $default) {
       if ($str === 'true') return true;
       if ($str === 'false') return false;
@@ -263,6 +200,19 @@
 
       register_graphql_scalar("ContentBlocks", [
         "description" => "Content blocks in ED.'s standard content blocks format.",
+        "serialize" => function($value) {
+          return $value;
+        },
+        "parseValue" => function($value) {
+          return $value;
+        },
+        "parseLiteral" => function($value) {
+          return $value;
+        }
+      ]);
+
+      register_graphql_scalar("Json", [
+        "description" => "Any JSON data",
         "serialize" => function($value) {
           return $value;
         },
@@ -322,7 +272,7 @@
 
           if (!$block) continue;
 
-          $field_name = $block['graphql_field_name'];
+          $field_name = $block['graphqlFieldName'];
           $field_group['type'] = 'group';
           $field_group['name'] = $field_name;
           $field_group['sub_fields'] = acf_get_fields($field_group['key']);
@@ -352,7 +302,7 @@
         }
       }
 
-      foreach ($blockFieldConfigs as $blockKey => $config) {
+      foreach ($blockFieldConfigs as $config) {
         $field_name = $config['name'];
         $this->register_graphql_field("CurrentBlock", $field_name, $config);
       }
@@ -419,8 +369,8 @@
         // Extract the block data
         if ($key === 'block') {
           foreach ($value as $blockKey => $result) {
-            if ($blockKey !== $meta['graphql_field_name']) {
-              QueryMonitor::logError("Invalid block name in block query for \"".$meta['title']."\" - expected '".$meta['graphql_field_name']."' but found \"{$blockKey}\"");
+            if ($blockKey !== $meta['graphqlFieldName']) {
+              QueryMonitor::logError("Invalid block name in block query for \"".$meta['title']."\" - expected '".$meta['graphqlFieldName']."' but found \"{$blockKey}\"");
             }
             $props = array_merge($props, $result);
           }

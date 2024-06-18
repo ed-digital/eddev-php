@@ -27,7 +27,7 @@
 
     static function importChunk($asset, $rel = "main") {
       if (self::$ignore) return;
-      if (self::$imported[$asset]) return;
+      if (isset(self::$imported[$asset])) return;
       self::$imported[$asset] = true;
 
       $value = @self::$manifest->$asset;
@@ -35,7 +35,7 @@
         return;
       }
       
-      if (is_array($value->imports)) {
+      if (@is_array($value->imports)) {
         foreach ($value->imports as $childAsset) {
           self::importChunk($childAsset, $rel === "main" ? "preload" : $rel);
         }

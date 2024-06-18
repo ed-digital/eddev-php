@@ -27,7 +27,9 @@
   class QueryHandler {
 
     static function setup() {
+
       add_action('rest_api_init', function() {
+        define('DOING_AJAX', true);
         register_rest_route('ed/v1', '/query/(?P<name>[A-Z0-9\/\_\-]+)', [
           'methods' => 'GET',
           'callback' => ['QueryHandler', 'handleQueryRequest']
@@ -38,10 +40,25 @@
           'callback' => ['QueryHandler', 'handleMutationRequest']
         ]);
       });
+      add_action('woocommerce_is_rest_api_request', function($result) {
+        if (strpos($_SERVER['REQUEST_URI'], '/wp-json/ed/v1/') !== false) {
+          return false;
+        }
+        return $result;
+      });
     }
 
     static function handleQueryRequest($data) {
+      $name = $data['name'];
       $cacheTime = @ED()->getCacheConfig()['queries'] ?? 300;
+
+      $query = self::loadQuery($name);
+
+      $shouldCache = strpos($query, 'nocache') === false;
+      if (!$shouldCache) {
+        $cacheTime = 0;
+      }
+
       if (!early_user_logged_in()) {
         if ((int)$cacheTime) {
           header('Cache-Control: public, max-age='.$cacheTime);
@@ -53,17 +70,20 @@
         header('X-ED-URI: '.$_SERVER['REQUEST_URI']);
       }
 
-      $name = $data['name'];
       $params = @json_decode(stripslashes($_GET['params']), true);
-
-      $query = self::loadQuery($name);
-      
       if (!$query) return self::error("Unknown query");
 
-      $result = cached_graphql([
-        "query" => $query . FragmentLoader::getAll(),
-        "variables" => $params
-      ], $cacheTime);
+      if ($cacheTime > 0) {
+        $result = cached_graphql([
+          "query" => $query . FragmentLoader::getAll(),
+          "variables" => $params
+        ], $cacheTime);
+      } else {
+        $result = graphql([
+          "query" => $query . FragmentLoader::getAll(),
+          "variables" => $params
+        ]);
+      }
 
       return $result;
     }
