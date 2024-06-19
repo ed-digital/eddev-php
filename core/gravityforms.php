@@ -98,6 +98,7 @@
 
     static function getFormByID($formID) {
       $form = GFAPI::get_form($formID);
+      $form['revisionId'] = GFFormsModel::get_latest_form_revisions_id($formID);
       unset($form['is_trash']);
       unset($form['is_active']);
       unset($form['date_created']);
