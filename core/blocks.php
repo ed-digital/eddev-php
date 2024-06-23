@@ -372,7 +372,7 @@
             if ($blockKey !== $meta['graphqlFieldName']) {
               QueryMonitor::logError("Invalid block name in block query for \"".$meta['title']."\" - expected '".$meta['graphqlFieldName']."' but found \"{$blockKey}\"");
             }
-            $props = array_merge($props, $result);
+            $props = array_merge($props, $result ?? []);
           }
         } else {
           $props[$key] = $value;

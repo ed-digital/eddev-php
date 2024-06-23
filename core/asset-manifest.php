@@ -30,20 +30,34 @@
       if (isset(self::$imported[$asset])) return;
       self::$imported[$asset] = true;
 
+      if (str_ends_with($asset, '.css')) {
+        self::$assets[] = [
+          'file' => ED()->themeURL."/dist/".self::$mode."/".$asset,
+          'type' => 'style',
+          'rel' => "preload"
+        ];
+        return;
+      }
+
       $value = @self::$manifest->$asset;
       if (!$value) {
         return;
       }
-      
+
       if (@is_array($value->imports)) {
         foreach ($value->imports as $childAsset) {
+          self::importChunk($childAsset, $rel === "main" ? "preload" : $rel);
+        }
+      }
+      if (@is_array($value->css)) {
+        foreach ($value->css as $childAsset) {
           self::importChunk($childAsset, $rel === "main" ? "preload" : $rel);
         }
       }
 
       self::$assets[] = [
         'file' => ED()->themeURL."/dist/".self::$mode."/".$value->file,
-        'type' => str_ends_with($value->file, '.css') ? 'style' : 'script',
+        'type' => 'script',
         'rel' => $rel
       ];
     }
@@ -70,7 +84,9 @@
       $assets = self::$assets;
 
       foreach ($assets as $asset) {
-        return '<script defer type="module" src="' . $asset['file'] . '"></script>';
+        if ($asset['type'] === 'script') {
+          return '<script defer type="module" src="' . $asset['file'] . '"></script>';
+        }
       }
 
       return "";
