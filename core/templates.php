@@ -58,34 +58,6 @@
       }
 
       self::$templates = $templates;
-
-
-      // if (self::$templates) return;
-      // $files = glob(ED()->themePath."/views/{,*/}*.tsx", GLOB_BRACE);
-      // $templates = [];
-      
-      // foreach($files as $full_path) {
-      //   $file = str_replace(ED()->themePath."/views/", "views/", $full_path);
-      //   $contents = file_get_contents($full_path);
-      //   if (!preg_match('|Template Name:(.*)$|mi', $contents, $header) ) {
-      //     continue;
-      //   }
-
-      //   $types = array('page');
-      //   if (preg_match('|Template Post Type:(.*)$|mi', $contents, $type)) {
-      //     $types = explode( ',', _cleanup_header_comment($type[1]));
-      //   }
-
-      //   foreach ($types as $type) {
-      //     $type = sanitize_key( $type );
-      //     if (!isset($templates[ $type ])) {
-      //       $templates[$type] = array();
-      //     }
-
-      //     $templates[$type][$file] = _cleanup_header_comment( $header[1] );
-      //   }
-      // }
-      // self::$templates = $templates;
     }
 
     private static function hookPageTemplates() {
@@ -152,7 +124,7 @@
         
         // Generate the data
         $data = [
-          'view' => str_replace(".tsx", "", $cleanedTemplateName),
+          'view' => preg_replace("/(^views\/|\.tsx)/", "", $cleanedTemplateName),
           'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
         ];
         $data['viewData'] = self::getDataForTemplate($template);
