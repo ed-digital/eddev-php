@@ -84,6 +84,19 @@
         $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
         $isPropsRequest = ED()->isPropsRequest();
 
+        if ($isPropsRequest && ED()->isDev) {
+          QueryMonitor::push("Props Request", "props");
+          set_error_handler(function($errno, $errstr, $errfile, $errline, ) {
+            QueryMonitor::logError([
+              'type' => 'php',
+              'code' => $errno,
+              'message' => $errstr,
+              'file' => str_replace(ED()->sitePath, "",$errfile),
+              'line' => $errline
+            ]);
+          });
+        }
+
         $_content = "";
 
         $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
