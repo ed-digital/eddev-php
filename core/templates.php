@@ -83,10 +83,13 @@
         
         $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
         $isPropsRequest = ED()->isPropsRequest();
+        $_content = "";
+        $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
+
+        QueryMonitor::push($cleanedTemplateName, "props");
 
         if ($isPropsRequest && ED()->isDev) {
-          QueryMonitor::push("Props Request", "props");
-          set_error_handler(function($errno, $errstr, $errfile, $errline, ) {
+          set_error_handler(function($errno, $errstr, $errfile, $errline) {
             QueryMonitor::logError([
               'type' => 'php',
               'code' => $errno,
@@ -97,9 +100,6 @@
           });
         }
 
-        $_content = "";
-
-        $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
 
         // Test for a redirect, via the Redirection plugin
         if (class_exists('Redirection')) {
