@@ -53,22 +53,22 @@
         $allowedBlocks = array_keys(self::$coreBlockTags);
     
         foreach ($blockTypes as $name => $def) {
-          if (is_callable(@$def['test'])) {
-            if (!$def['test']($post, $templateName)) {
+          // Exclude by post type, if a post type array has been specified
+          if (@is_array(($def['types']))) {
+            if (!in_array($post->post_type, $def['types'])) continue;
+          }
+          // Exclude by template
+          if ($post->post_type === 'page') {
+            if (@is_array($def['templates']) && @!in_array($templateName, $def['templates'])) {
               continue;
             }
-          } else {
-            if ($post->post_type === 'page') {
-              if (@is_array($def['templates']) && @!in_array($templateName, $def['templates'])) {
-                // Don't allow this block, since the current template is not on the whitelist
-                continue;
-              }
-            }
           }
+
           $allowedBlocks[] = $name;
         }
 
         $allowedBlocks[] = 'core/list-item';
+        $allowedBlocks[] = "core/block";
     
         return $allowedBlocks;
       }, 2, 3);
