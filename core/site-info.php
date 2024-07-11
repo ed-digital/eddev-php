@@ -22,7 +22,9 @@
 
       $info = [
         'postTypes' => [],
+        'coreBlocks' => [],
         'plugins' => [],
+        'blockTags' => []
       ];
 
       // Get post types
@@ -36,6 +38,23 @@
           'graphqlPluralName' => $type->graphql_plural_name,
           'excludeFromSearch' => $type->exclude_from_search
         ];
+      }
+
+      // Core blocks
+      foreach (EDBlocks::$coreBlockTags as $block => $tags) {
+        foreach ($tags as $tag) {
+          if (!in_array($tag, $info['blockTags'])) {
+            $info['blockTags'][] = $tag;
+          }
+        }
+        if (!in_array($block, $info['coreBlocks'])) {
+          $info['coreBlocks'][] = $block;
+        }
+      }
+      foreach (EDBlocks::$blockGroupTargets as $block) {
+        if (!in_array($block, $info['coreBlocks'])) {
+          $info['coreBlocks'][] = $block;
+        }
       }
 
       // Get plugins

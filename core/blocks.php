@@ -435,6 +435,24 @@
     }
 
     public function processBlocks($blocks) {
+      // Expand pattern blocks
+      $expanded = [];
+      foreach ($blocks as $block) {
+        if ($block['blockName'] === 'core/block') {
+          $patternId = $block['attrs']['ref'];
+          $post = get_post($patternId);
+          if ($post) {
+            $patternBlocks = parse_blocks($post->post_content);
+            foreach ($patternBlocks as $patternBlock) {
+              $expanded[] = $patternBlock;
+            }
+          }
+        } else {
+          $expanded[] = $block;
+        }
+      }
+      $blocks = $expanded;
+
       // Filter out empty blocks
       $blocks = array_filter($blocks, function($block) {
         if (!$block['blockName'] && preg_match("/^\s*$/", $block['innerHTML'])) {
