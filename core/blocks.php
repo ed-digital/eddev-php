@@ -38,6 +38,14 @@
         });
       });
 
+      add_filter('block_editor_settings_all', function($settings) {
+        $settings['fontLibraryEnabled'] = false;
+        $settings['enableOpenverseMediaCategory'] = false;
+        return $settings;
+      });
+
+      add_filter('should_load_remote_block_patterns', '__return_false');
+
       add_filter('allowed_block_types_all', function($types, $ctx) {
         // // Get the current template, if one exists.
         $post = $ctx->post;
@@ -84,6 +92,9 @@
       foreach ($themeInfo['blocks'] as $block) {
         $block['supports']['jsx'] = true;
         $block['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
+        $block['use_post_meta'] = isset($block['postmeta']);
+        $block['acf_block_version'] = 2;
+        $block['validate'] = true;
         acf_register_block_type($block);
         self::$blocks[$block['acfName']] = $block;
       }
@@ -107,9 +118,10 @@
         add_action('admin_init', function() use($lock) {
           $postType = get_post_type_object($lock['type']);
           $postType->template = $lock['content'];
-          $postType->template_lock = 'all';
+          $postType->template_lock = $lock['mode'] ?? 'all';
         });
-      } else if (@$lock['template']) {
+      }
+      if (@$lock['template']) {
         add_filter('block_editor_settings', function($settings, $post) use($lock) {
           if ($post->post_type === @$lock['type']) {
             $settings['template'] = $lock['content'];
@@ -150,7 +162,7 @@
         'id' => $args['id'],
         'name' => $args['name'],
         'data' => $args['data']
-      ]);
+      ], 0);
 
       echo json_encode($result);
     }
@@ -229,8 +241,7 @@
         'description' => "The current Gutenberg block in context.",
         'resolve' => function($root, $args, $context, $info) {
           $post = get_post($root->ID);
-          $result = $this->parseBlocks($post->post_content);
-          return $result;
+          return $this->parseBlocks($post->post_content, $root->ID);
         }
       ]);
 
@@ -281,8 +292,8 @@
               'name'            => $field_name,
               'acf_field'       => $field_group,
               'acf_field_group' => null,
-              'resolve'         => function ( $root ) use ( $field_group ) {
-                return isset( $root ) ? $root : null;
+              'resolve'         => function ($root) use ($field_group) {
+                return isset($root) ? $root : null;
               }
             ];
             $config['acf_field']['graphql_types'] = ['CurrentBlock'];
@@ -323,11 +334,11 @@
       return $rules;
     }
 
-    public function parseBlocks($content) {
-      return $this->processBlocks(parse_blocks($content));
+    public function parseBlocks($content, $postID) {
+      return $this->processBlocks(parse_blocks($content), $postID);
     }
 
-    public static function runBlockQuery($meta, $attributes) {
+    public static function runBlockQuery($meta, $attributes, $postID) {
       $cacheKey = null;
       $queryFile = ED()->themePath . "/blocks/" . @$meta['id'] . ".graphql";
       $contents = QueryLoader::loadQueryFile($queryFile);
@@ -348,12 +359,18 @@
 
       QueryMonitor::push($queryFile, "block");
       $params = EDTemplates::getQueryParams();
-      if (@!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
+      if (@!$attributes['id']) {
+        $attributes['id'] = acf_get_block_id($attributes, [], isset($meta['postmeta']));
+      }
       BlockQLRoot::setContext($attributes);
+      if (isset($meta['postmeta'])) {
+        acf_add_block_meta_values($attributes, $postID);
+      }
       $result = graphql([
         'query' => $contents . FragmentLoader::getAll(),
         'variables' => $params
       ]);
+      // dump($result);
 
       if (@$result['errors']) {
         foreach ($result['errors'] as $err) {
@@ -396,7 +413,7 @@
       return false;
     }
 
-    public function processSingleBlock($block) {
+    public function processSingleBlock($block, $postID) {
       if (strpos($block['blockName'], "acf/") === 0) {
         // ACF blocks should have their 
         $meta = @EDBlocks::$blocks[$block['blockName']];
@@ -411,7 +428,7 @@
         //   }
         // }
         AssetManifest::importChunk("blocks/".$meta['id'].".tsx", 'modulepreload');
-        $block['props'] = $this->runBlockQuery($meta, $block['attrs']);
+        $block['props'] = $this->runBlockQuery($meta, $block['attrs'], $postID);
         $block['inline'] = @$block['attrs']['inline'];
         $block['rule'] = 'react';
         unset($block['wpClassName']);
@@ -420,7 +437,7 @@
         unset($block['innerHTML']);
         return $block;
       } else {
-        $rule = $this->rules[$block['blockName']];
+        $rule = @$this->rules[$block['blockName']];
         if ($rule === 'render') {
           $block['innerHTML'] = apply_filters('the_content', render_block($block));
           unset($block['innerBlocks']);
@@ -434,7 +451,7 @@
       }
     }
 
-    public function processBlocks($blocks) {
+    public function processBlocks($blocks, $postID) {
       // Expand pattern blocks
       $expanded = [];
       foreach ($blocks as $block) {
@@ -464,13 +481,29 @@
       });
 
       // Process each block
-      $blocks = array_values(array_map(function($block) {
-        $block = $this->processSingleBlock($block);
-        if (is_array(@$block['innerBlocks']) && count(@$block['innerBlocks'])) {
-          $block['innerBlocks'] = $this->processBlocks($block['innerBlocks']);
+      $input = $blocks;
+      $blocks = [];
+      foreach ($input as $block) {
+        $meta = @EDBlocks::$blocks[$block['blockName']];
+        if ($meta && isset($meta['frontendMode'])) {
+          if ($meta['frontendMode'] === 'hidden') {
+            continue;
+          } else if ($meta['frontendMode'] === 'childrenOnly') {
+            if (is_array(@$block['innerBlocks']) && count(@$block['innerBlocks'])) {
+              $children = $this->processBlocks($block['innerBlocks'], $postID);
+              foreach ($children as $block) {
+                $blocks[] = $block;
+              }
+            }
+            continue;
+          }
         }
-        return $block;
-      }, $blocks));
+        $block = $this->processSingleBlock($block, $postID);
+        if (is_array(@$block['innerBlocks']) && count(@$block['innerBlocks'])) {
+          $block['innerBlocks'] = $this->processBlocks($block['innerBlocks'], $postID);
+        }
+        $blocks[] = $block;
+      }
 
       // Group blocks
       if (count(EDBlocks::$blockGroupTargets) > 0) {
