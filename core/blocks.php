@@ -90,6 +90,8 @@
       $themeInfo = EDThemeInfo::load();
 
       foreach ($themeInfo['blocks'] as $block) {
+        // Skip _editor and _core
+        if (preg_match("/^_[^\/]+$/", $block['id'])) continue;
         $block['supports']['jsx'] = true;
         $block['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
         $block['use_post_meta'] = isset($block['postmeta']);

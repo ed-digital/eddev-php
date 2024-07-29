@@ -204,24 +204,24 @@
       */
       
       
-      function validate_value($valid, $value, $field, $input){
+      // function validate_value($valid, $value, $field, $input){
         
-        // Basic usage
-        if($value < $field['custom_minimum_setting']) {
-          $valid = false;
-        }
-        
-        
-        // Advanced usage
-        if($value < $field['custom_minimum_setting']) {
-          $valid = __('The value is too little!','TEXTDOMAIN');
-        }
+      //   // Basic usage
+      //   if($value < @$field['custom_minimum_setting']) {
+      //     $valid = false;
+      //   }
         
         
-        // return
-        return $valid;
+      //   // Advanced usage
+      //   if($value < @$field['custom_minimum_setting']) {
+      //     $valid = __('The value is too little!','TEXTDOMAIN');
+      //   }
         
-      }
+        
+      //   // return
+      //   return $valid;
+        
+      // }
 
       /*
       *  load_field()
