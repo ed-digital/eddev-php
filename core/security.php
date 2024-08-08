@@ -5,7 +5,7 @@
       if (!headers_sent()) {
         header('X-Frame-Options: DENY');
         header('X-Content-Type-Options: nosniff');
-        header('Content-Security-Policy: frame-ancestors "none"');
+        header('Content-Security-Policy: frame-ancestors none');
       }
 
       if (function_exists('add_filter')) {

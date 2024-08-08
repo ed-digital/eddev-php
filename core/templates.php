@@ -172,6 +172,7 @@
           $isCurrentTemplate = ED()->themePath.$templateBundle === $template;
           $async = $isCurrentTemplate ? '' : 'async';
           $_scripts .= "<script type=\"text/javascript\" $async src=\"" . self::appendFileVersion($template) . "\"></script>\n";
+          $_styles .= "<link rel=\"preload\" as=\"script\" href=\"" . self::appendFileVersion($template) . "\">\n";
         }
         if ($templateBundle) {
           $cssFile = str_replace(".frontend.js", ".css", $templateBundle);
@@ -188,6 +189,7 @@
         }
 
         $_scripts .= "<script src=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
+        $_styles .= "<link rel=\"preload\" as=\"script\" href=\"".self::appendFileVersion(ED()->themeURL."/dist/frontend/main.frontend.js")."\"></script>\n";
 
         // if (@$data['errorStack'] && @count($data['errorStack']) == 0) {
         //   unset($data['errorStack']);
@@ -200,7 +202,7 @@
           echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
           exit;
         } else {
-          $_content = "<script>window._PAGE_DATA = ".json_encode($data, JSON_PRETTY_PRINT)."</script>";
+          $_content = "<script>window._PAGE_DATA = ".json_encode($data)."</script>";
           include(ED()->themePath."/index.php");
         }
         exit;
