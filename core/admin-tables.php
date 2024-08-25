@@ -55,11 +55,10 @@
       global $post;
 			if(isset($this->columnDefs[$columnName])) {
 				$colDef = $this->columnDefs[$columnName];
-				if($colDef && $colDef['render']) {
+				if($colDef && @$colDef['render']) {
 					$colDef['render']($post);
 				}
 			}
-			
 		}
 		
 	}

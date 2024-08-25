@@ -13,10 +13,12 @@
     return $str;
   }
 
-  function dump(...$args) {
-    if(error_reporting() === 0) return;
+  if (!function_exists('dump')) {
+    function dump(...$args) {
+      if(error_reporting() === 0) return;
 
-    echo "<pre># ";
-    echo htmlentities(dump_as_string(...$args));
-    echo "</pre>";
+      echo "<pre># ";
+      echo htmlentities(dump_as_string(...$args));
+      echo "</pre>";
+    }
   }

@@ -69,6 +69,10 @@
         ];
       }
 
+      // Scalar types
+      $info['scalarTypes'] = EDTypeScriptRegistry::getTypes();
+      $info['postMetaTypes'] = EDTypeScriptRegistry::getPostMeta();
+
       return $info;
     }
   }

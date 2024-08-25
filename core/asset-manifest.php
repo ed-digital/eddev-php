@@ -12,8 +12,9 @@
     // A list of assets, in order of import
     static $assets = [];
 
-    static function setup($ignore = false) {
+    static function setup($ignore = false, $mode = "frontend") {
       if (self::$manifest) return;
+      self::$mode = $mode;
       if ($ignore) {
         self::$ignore = true;
         return;
@@ -90,6 +91,17 @@
       }
 
       return "";
+    }
+
+    static function getEntryScript() {
+      if (self::$ignore) return '';
+      $assets = self::$assets;
+
+      foreach ($assets as $asset) {
+        if ($asset['type'] === 'script') {
+          return $asset['file'];
+        }
+      }
     }
     
   }

@@ -54,7 +54,9 @@
       $templates = [];
 
       foreach ($themeInfo['templates'] as $template) {
-        $templates[$template['postType']][$template['fileName']] = $template['title'];
+        foreach ($template['postType'] as $postType) {
+          $templates[$postType][$template['fileName']] = $template['title'];
+        }
       }
 
       self::$templates = $templates;
@@ -63,6 +65,7 @@
     private static function hookPageTemplates() {
       add_filter('theme_templates', function($templates, $theme, $post, $post_type) {
         self::loadPageTemplates();
+
         return array_merge($templates, self::$templates[$post_type] ?? []);
       }, 10, 4);
     }

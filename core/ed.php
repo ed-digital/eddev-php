@@ -74,7 +74,7 @@
         }
       });
 
-      add_action('admin_head', array($this, "_hookListingColumns"));
+      add_action('admin_init', array($this, "_hookListingColumns"));
     }
 
     function isDevProxy() {
@@ -215,8 +215,6 @@
           </script>
 
           <script type="module" src="/@vite/client"></script>
-          <!-- <script type="module" blocking src="/@id/global-react"></script>
-          <script type="module" blocking src="/@id/global-react-dom"></script> -->
           <?
         });
 
@@ -226,26 +224,19 @@
           <?
         });
 
-        // add_filter('admin_enqueue_scripts', function() {
-        //   wp_deregister_script('react');
-        //   wp_register_script('react', '/global-react.js', [], '', [
-        //     'type' => 'module'
-        //   ]);
-        // }, 1000);
-
-        add_filter('script_loader_tag', function($tag, $handle, $src) {
-          if ($handle === 'react') {
-            // return "";
-            // return "<script type='module' src=\"/node_modules/.vite/deps/chunk-6NLOLHO3.js?v=fbc7fbaa\"></script><script type='module'>window.React = require_react();</script>";
-          } else if ($handle === 'react-dom') {
-            // return "";
-            // return "<script type='module' src=\"/global-react-dom.js\"></script>";
-          }
-          // } else {
-          //   return str_replace("<script ", "<script defer ", $tag);
-          // }
-          return $tag;
-        }, 10, 3);
+        // add_filter('script_loader_tag', function($tag, $handle, $src) {
+        //   if ($handle === 'react') {
+        //     // return "";
+        //     // return "<script type='module' src=\"/node_modules/.vite/deps/chunk-6NLOLHO3.js?v=fbc7fbaa\"></script><script type='module'>window.React = require_react();</script>";
+        //   } else if ($handle === 'react-dom') {
+        //     // return "";
+        //     // return "<script type='module' src=\"/global-react-dom.js\"></script>";
+        //   }
+        //   // } else {
+        //   //   return str_replace("<script ", "<script defer ", $tag);
+        //   // }
+        //   return $tag;
+        // }, 10, 3);
       }
 
       add_filter('admin_enqueue_scripts', function() {
@@ -261,20 +252,32 @@
             wp_enqueue_script($dep);
           }
         } else {
-          $jsFile = '/dist/admin/main.admin.js';
-          if (file_exists(ED()->themePath.@$jsFile)) {
+          AssetManifest::setup(false, "cms");
+          AssetManifest::importChunk("virtual:eddev-bootup", 'main');
+          $adminEntry = AssetManifest::getEntryScript();
+          $adminEntryPath = str_replace(ED()->themeURL, ED()->themePath, $adminEntry);
+
+          if (file_exists($adminEntryPath)) {
             wp_enqueue_script(
               'theme_admin_js',
-              $this->themeURL.$jsFile,
+              $adminEntry,
               get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
-              filemtime(ED()->themePath.@$jsFile)
+              filemtime($adminEntryPath)
             );
           }
         }
+
         // if (file_exists(ED()->themePath.$style)) {
         //   wp_enqueue_style('theme_admin_css', ED()->themeURL.$style, [], filemtime(ED()->themePath.$style));
         // }
       });
+
+      add_filter('script_loader_tag', function($tag, $handle, $src) {
+        if ($handle === "theme_admin_js") {
+          return '<script type="module" src="'.$src.'"></script>';
+        }
+        return $tag;
+      }, 10, 3);
 
       add_action('enqueue_block_editor_assets', function() {
         add_action('admin_print_scripts', function() {
@@ -402,6 +405,98 @@
         // Save the columns to each post type
         $this->postTypeColumns[$name] = $args['adminColumns'];
       }
+    }
+
+    /**
+     * Accepts the same arguments as register_post_meta, but also accepts a 'typescript' key, which will be used to generate TypeScript types.
+     * 
+     * @see https://developer.wordpress.org/reference/functions/register_post_meta/
+     */
+    function registerPostMeta(string | array $post_type, string $meta_key, array $args) {
+      $post_types = is_array($post_type) ? $post_type : [$post_type];
+      foreach ($post_types as $post_type) {
+        $this->registerMeta('post', $meta_key, array_merge($args, [
+          'object_subtype' => $post_type
+        ]));
+      } 
+    }
+
+    function registerMeta(string $object_type, string $meta_key, array $args, string|array $deprecated = null): bool {
+      // Normalize some of the args
+      $single = @$args['single'] === false ? false : true;
+      $args['single'] = $single;
+      $showInRest = @$args['show_in_rest'] ?? true;
+
+      /**
+       * WP Meta fields with object types require a schema to be defined in the REST API.
+       * We don't really care about that, so we replace it with an object that is allowed to have arbitrary properties.
+       */
+      if (is_bool($showInRest) && $showInRest) {
+        if ($args['type'] === 'object') {
+          $args['show_in_rest'] = [
+            'schema' => [
+              'type' => 'object',
+              'properties' => [],
+              'additionalProperties' => true
+            ]
+          ];
+        }
+      }
+
+      // Determine the 'type name' that will be used in GraphQL/TypeScript
+      $nameKeys = array_filter([@$args['object_subtype'] ?? $object_type, $meta_key, @$args['type']], function($key) {
+        return $key;
+      });
+      $typeName = graphql_format_type_name(implode("-", $nameKeys));
+
+      // Determine the typescript type
+      $typescriptType = 'any';
+      if (isset($args['typescript'])) {
+        $typescriptType = $args['typescript'];
+      } else if ($args['type'] === 'string') {
+        $typescriptType = 'string';
+      } else if ($args['type'] === 'integer') {
+        $typescriptType = 'number';
+      } else if ($args['type'] === 'number') {
+        $typescriptType = 'number';
+      } else if ($args['type'] === 'boolean') {
+        $typescriptType = 'boolean';
+      } else if ($args['type'] === 'array') {
+        $typescriptType = 'any[]';
+      } else if ($args['type'] === 'object') {
+        $typescriptType = 'any';
+      }
+      if ($args['single'] === false) {
+        $typescriptType .= '[]';
+      }
+
+      // Register the TypeScript type
+      EDTypeScriptRegistry::registerType($typeName, $typescriptType);
+      // Register this meta value so that the eddev compiler can generate types for usePostMetaEditor
+      EDTypeScriptRegistry::registerPostMeta($meta_key, $typeName, "Json");
+
+      register_graphql_scalar($typeName, [
+        'serialize' => function($value) {
+          return $value;
+        },
+        'parseValue' => function($value) {
+          return $value;
+        },
+        'parseLiteral' => function($ast) {
+          return $ast->value;
+        }
+      ]);
+      if ($object_type === 'post' && isset($args['object_subtype'])) {
+        add_post_type_support($args['object_subtype'], "custom-fields");
+        register_graphql_field(graphql_format_type_name($args['object_subtype']), $meta_key, [
+          'type' => $single ? $typeName : ['list_of' => $typeName],
+          'description' => $args['description'] ?? '',
+          'resolve' => function($post) use ($object_type, $meta_key, $single) {
+            return get_metadata($object_type, $post->ID, $meta_key, $single);
+          }
+        ]);
+      }
+      return register_meta($object_type, $meta_key, $args, $deprecated);
     }
 
     function registerFieldType($name, $args) {

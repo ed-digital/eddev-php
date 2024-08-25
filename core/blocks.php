@@ -20,6 +20,26 @@
         wp_add_inline_script('wp-block-editor', "window.ED_BLOCK_TAGS = " . json_encode(self::$coreBlockTags), 'after');
       });
 
+      /**
+       * A bit of a hack which allows the Taxonomy field to work with block previews in the editor.
+       * This may be fixed by ACF in the future, but essentially the live-preview when editing ACF fields
+       * from 'post meta' blocks which have load_terms breaks. This is because the field is trying to load
+       * from the post, instead of loading from the parameters sent along with the preview request.
+       */
+      add_action('wp_ajax_acf/ajax/fetch-block', function() {
+        $info = @json_decode(stripslashes($_POST['block']));
+        if (!$info || !isset($info->name)) return;
+        $block = self::$blocks[@$info->name];
+        if (!$block || !isset($block['use_post_meta'])) return;
+        if ($block['use_post_meta']) {
+          add_filter('acf/load_field', function($field) {
+            $field['load_terms'] = false;
+            $field['save_terms'] = false;
+            return $field;
+          });
+        }
+      }, -5);
+
       add_filter('block_categories_all', function($categories) {
         $categories[] = array(
           'slug' => 'layouts',
@@ -151,6 +171,7 @@
     // It should produce the same props that the frontend receives
     static function renderBlockJSON($args) {
       $block = self::$blocks[$args['name']];
+      
       // $blockData = json_parse($_POST['block']);
       // BlockQLRoot::setContext($args);
       $fields = acf_get_block_fields( $args );
@@ -362,17 +383,16 @@
       QueryMonitor::push($queryFile, "block");
       $params = EDTemplates::getQueryParams();
       if (@!$attributes['id']) {
-        $attributes['id'] = acf_get_block_id($attributes, [], isset($meta['postmeta']));
+        $attributes['id'] = "block_".acf_get_block_id($attributes, [], isset($meta['use_post_meta']));
       }
       BlockQLRoot::setContext($attributes);
-      if (isset($meta['postmeta'])) {
+      if (isset($meta['use_post_meta'])) {
         acf_add_block_meta_values($attributes, $postID);
       }
       $result = graphql([
         'query' => $contents . FragmentLoader::getAll(),
         'variables' => $params
       ]);
-      // dump($result);
 
       if (@$result['errors']) {
         foreach ($result['errors'] as $err) {

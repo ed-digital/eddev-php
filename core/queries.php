@@ -12,7 +12,10 @@
 
     static function getAll() {
       if (self::$cache) return self::$cache;
-      $fragments = glob(ED()->themePath."/queries/fragments/*.graphql");
+      $fragments = array_merge(
+        glob(ED()->themePath."/queries/fragments/*/*.graphql"),
+        glob(ED()->themePath."/queries/fragments/*.graphql")
+      );
       $output = [];
       foreach ($fragments as $frag) {
         $output[] = file_get_contents($frag);
