@@ -414,11 +414,11 @@
      */
     function registerPostMeta(string | array $post_type, string $meta_key, array $args) {
       $post_types = is_array($post_type) ? $post_type : [$post_type];
-      foreach ($post_types as $post_type) {
+      foreach ($post_types as $t) {
         $this->registerMeta('post', $meta_key, array_merge($args, [
-          'object_subtype' => $post_type
+          'object_subtype' => $t
         ]));
-      } 
+      }
     }
 
     function registerMeta(string $object_type, string $meta_key, array $args, string|array $deprecated = null): bool {
@@ -426,6 +426,7 @@
       $single = @$args['single'] === false ? false : true;
       $args['single'] = $single;
       $showInRest = @$args['show_in_rest'] ?? true;
+      $args['show_in_rest'] = $showInRest;
 
       /**
        * WP Meta fields with object types require a schema to be defined in the REST API.
@@ -447,48 +448,73 @@
       $nameKeys = array_filter([@$args['object_subtype'] ?? $object_type, $meta_key, @$args['type']], function($key) {
         return $key;
       });
-      $typeName = graphql_format_type_name(implode("-", $nameKeys));
 
       // Determine the typescript type
       $typescriptType = 'any';
+      $typeName = null;
+      $customScalar = false;
       if (isset($args['typescript'])) {
         $typescriptType = $args['typescript'];
+        $customScalar = true;
       } else if ($args['type'] === 'string') {
         $typescriptType = 'string';
+        $typeName = 'String';
       } else if ($args['type'] === 'integer') {
         $typescriptType = 'number';
+        $typeName = 'Int';
       } else if ($args['type'] === 'number') {
         $typescriptType = 'number';
+        $typeName = 'Float';
       } else if ($args['type'] === 'boolean') {
         $typescriptType = 'boolean';
+        $typeName = 'Boolean';
       } else if ($args['type'] === 'array') {
         $typescriptType = 'any[]';
+        $customScalar = true;
       } else if ($args['type'] === 'object') {
         $typescriptType = 'any';
+        $customScalar = true;
       }
       if ($args['single'] === false) {
         $typescriptType .= '[]';
+        if ($typeName) {
+          $typeName = ['list_of' => $typeName];
+        }
+      }
+
+      if (!$typeName) {
+        $typeName = graphql_format_type_name(implode("-", $nameKeys));
+        $customScalar = true;
       }
 
       // Register the TypeScript type
-      EDTypeScriptRegistry::registerType($typeName, $typescriptType);
-      // Register this meta value so that the eddev compiler can generate types for usePostMetaEditor
-      EDTypeScriptRegistry::registerPostMeta($meta_key, $typeName, "Json");
-
-      register_graphql_scalar($typeName, [
-        'serialize' => function($value) {
-          return $value;
-        },
-        'parseValue' => function($value) {
-          return $value;
-        },
-        'parseLiteral' => function($ast) {
-          return $ast->value;
-        }
-      ]);
+      if ($customScalar) {
+        EDTypeScriptRegistry::registerType($typeName, $typescriptType);
+        register_graphql_scalar($typeName, [
+          'serialize' => function($value) {
+            return $value;
+          },
+          'parseValue' => function($value) {
+            return $value;
+          },
+          'parseLiteral' => function($ast) {
+            return $ast->value;
+          }
+        ]);
+        // Register this meta value so that the eddev compiler can generate types for usePostMetaEditor
+        EDTypeScriptRegistry::registerPostMeta($meta_key, true, $typeName);
+      } else {
+        EDTypeScriptRegistry::registerPostMeta($meta_key, false, $typescriptType);
+      }
+      
       if ($object_type === 'post' && isset($args['object_subtype'])) {
+        $postType = get_post_type_object($args['object_subtype']);
+        if (!$postType) {
+          throw new Error("Cannot register meta for post type '".$args['object_subtype']."' because it has not yet been registered. Make sure you register the post type before registering meta fields.");
+        }
         add_post_type_support($args['object_subtype'], "custom-fields");
-        register_graphql_field(graphql_format_type_name($args['object_subtype']), $meta_key, [
+        $objectTypeName = graphql_format_type_name(@$postType->graphql_single_name ?? $args['object_subtype']);
+        register_graphql_field($objectTypeName, $meta_key, [
           'type' => $single ? $typeName : ['list_of' => $typeName],
           'description' => $args['description'] ?? '',
           'resolve' => function($post) use ($object_type, $meta_key, $single) {
@@ -496,6 +522,8 @@
           }
         ]);
       }
+      // dump($object_type, $meta_key, $args, $deprecated);
+      // exit;
       return register_meta($object_type, $meta_key, $args, $deprecated);
     }
 

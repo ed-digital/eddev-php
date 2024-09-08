@@ -8,9 +8,15 @@
       self::$types[$typeName] = $type;
     }
 
-    static function registerPostMeta($key, $typeName) {
+    static function registerPostMeta($key, $isScalar, $typeName) {
+      foreach (self::$postMetaTypes as $meta) {
+        if ($meta['key'] === $key && $meta['isScalar'] === $isScalar && $meta['typeName'] === $typeName) {
+          return;
+        }
+      }
       self::$postMetaTypes[] = [
         'key' => $key,
+        'isScalar' => $isScalar,
         'typeName' => $typeName
       ];
     }
