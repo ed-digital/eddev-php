@@ -22,3 +22,12 @@
       echo "</pre>";
     }
   }
+
+
+  function ed_dump(...$args) {
+    if(error_reporting() === 0) return;
+
+    echo "<pre># ";
+    echo htmlentities(dump_as_string(...$args));
+    echo "</pre>";
+  }

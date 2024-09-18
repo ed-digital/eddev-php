@@ -9,14 +9,14 @@
       global $wpdb;
       $newHash = md5($create);
       $lastHash = get_option("ed_table_migration_".$migrationId);
-      dump("Hash", $newHash, $lastHash);
-      exit;
+      // dump("Hash", $newHash, $lastHash);
+      // exit;
       if ($lastHash === $newHash) {
         // The table is already up to date — no need to run the migration.
         return;
       }
 
-      include_once(__dir__."/../lib/compare-tables/dbStruct.php");
+      include_once(__dir__."/../lib/dbStruct.php");
       if (!preg_match("/CREATE\s+TABLE\s+['`\"]?([0-9A-Za-z\_\.]+)['`\"]?/", $create, $match)) {
         throw new Error("Couldn't run table migration, no table name was supplied.");
       }
