@@ -75,6 +75,15 @@ class EDCore {
     });
 
     add_action('admin_init', array($this, "_hookListingColumns"));
+
+    // Return app data when requested.
+    if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
+      add_action('parse_request', function () {
+        header('Content-Type: application/json');
+        echo json_encode(EDTemplates::getDataForApp());
+        exit;
+      });
+    }
   }
 
   function isDevProxy() {
@@ -91,9 +100,9 @@ class EDCore {
   function getCacheConfig() {
     $config = $this->getConfig();
     $hostname = $_SERVER['HTTP_HOST'];
-    if ($config['cache']) {
-      if (@$config['cache'][$hostname]) return $config['cache'][$hostname];
-      if (@$config['cache']["*"]) return $config['cache']["*"];
+    if (isset($config['cache'])) {
+      if (isset($config['cache'][$hostname])) return $config['cache'][$hostname];
+      if (isset($config['cache']["*"])) return $config['cache']["*"];
     }
     return [];
   }
@@ -204,15 +213,11 @@ class EDCore {
     if (ED()->isDevProxy()) {
       add_action('admin_head', function () {
         // Add Vite HMR info
-?>
-        <!---VITE_HEADER--->
-      <?
+        echo "<!---VITE_HEADER--->";
       });
 
       add_action('admin_footer', function () {
-      ?>
-        <!---VITE_FOOTER--->
-      <?
+        echo "<!---VITE_FOOTER--->";
       });
 
       // add_filter('script_loader_tag', function($tag, $handle, $src) {
@@ -566,7 +571,7 @@ class EDCore {
 
     if ($location === "head") {
       if (@$tracking['tagManagerID']) {
-      ?>
+?>
         <!-- Google Tag Manager [ED] -->
         <script>
           (function(w, d, s, l, i) {
@@ -625,8 +630,7 @@ class EDCore {
       if (@$tracking['tagManagerID']) {
         ?>
         <!-- Google Tag Manager (noscript) [ED] -->
-        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?= $tracking['tagManagerID'] ?>"
-            height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?= $tracking['tagManagerID'] ?>" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <!-- End Google Tag Manager (noscript) [ED] -->
 <?
       }
