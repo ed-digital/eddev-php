@@ -210,7 +210,7 @@ class EDCore {
       EDSiteInfo::init();
     }
 
-    if (ED()->isDevProxy()) {
+    if (ED()->isDevProxy() && preg_match("/post(-new)?\.php/", $_SERVER['REQUEST_URI'])) {
       add_action('admin_head', function () {
         // Add Vite HMR info
         echo "<!---VITE_HEADER--->";
@@ -531,6 +531,21 @@ class EDCore {
     if (class_exists('EDACFField')) {
       return new EDACFField($name, $args);
     }
+  }
+
+  public function register_typed_scalar($typeName, $typescriptType) {
+    EDTypeScriptRegistry::registerType($typeName, $typescriptType);
+    register_graphql_scalar($typeName, [
+      'serialize' => function ($value) {
+        return $value;
+      },
+      'parseValue' => function ($value) {
+        return $value;
+      },
+      'parseLiteral' => function ($ast) {
+        return $ast->value;
+      }
+    ]);
   }
 
   public function _hookListingColumns() {

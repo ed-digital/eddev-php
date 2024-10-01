@@ -77,6 +77,16 @@ class Routes {
     return $template;
   }
 
+  static function getCustomRoute() {
+    $routeId = get_query_var('custom_route');
+    if ($routeId) {
+      if (isset(self::$routes[$routeId])) {
+        return self::$routes[$routeId];
+      }
+    }
+    return null;
+  }
+
   static function filterTitle($title) {
     $route = get_query_var('custom_route');
     if ($route) {
