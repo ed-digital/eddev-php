@@ -291,6 +291,9 @@ class EDTemplates {
         $postID = $_POST['post_id'];
       }
     }
+    if ($postID == 0 && isset($_GET['post']) && isset($_GET['action']) == 'edit') {
+      $postID = $_GET['post'];
+    }
     return array_merge(
       [
         'postId' => $postID ?? $_POST['post_id'] ?? $_GET['id'],
