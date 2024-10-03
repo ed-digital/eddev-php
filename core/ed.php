@@ -210,7 +210,43 @@ class EDCore {
       EDSiteInfo::init();
     }
 
-    if (ED()->isDevProxy() && preg_match("/post(-new)?\.php/", $_SERVER['REQUEST_URI'])) {
+    add_action('current_screen', function ($screen) {
+      $enabled = $this->screenIsBlockEditor($screen);
+      if ($enabled) {
+        $this->adminScripts();
+      }
+    });
+
+    // if (ED()->isDevProxy() && preg_match("/post(-new)?\.php/", $_SERVER['REQUEST_URI'])) {
+
+
+    //   // add_filter('script_loader_tag', function($tag, $handle, $src) {
+    //   //   if ($handle === 'react') {
+    //   //     // return "";
+    //   //     // return "<script type='module' src=\"/node_modules/.vite/deps/chunk-6NLOLHO3.js?v=fbc7fbaa\"></script><script type='module'>window.React = require_react();</script>";
+    //   //   } else if ($handle === 'react-dom') {
+    //   //     // return "";
+    //   //     // return "<script type='module' src=\"/global-react-dom.js\"></script>";
+    //   //   }
+    //   //   // } else {
+    //   //   //   return str_replace("<script ", "<script defer ", $tag);
+    //   //   // }
+    //   //   return $tag;
+    //   // }, 10, 3);
+    // }
+  }
+
+  private function screenIsBlockEditor($screen) {
+    try {
+      return $screen->is_block_editor === true || $screen->base === "site-editor" || $screen->is_block_editor();
+    } catch (Error $err) {
+    } catch (Exception $err) {
+    }
+    return false;
+  }
+
+  function adminScripts() {
+    if (ED()->isDevProxy()) {
       add_action('admin_head', function () {
         // Add Vite HMR info
         echo "<!---VITE_HEADER--->";
@@ -219,26 +255,12 @@ class EDCore {
       add_action('admin_footer', function () {
         echo "<!---VITE_FOOTER--->";
       });
-
-      // add_filter('script_loader_tag', function($tag, $handle, $src) {
-      //   if ($handle === 'react') {
-      //     // return "";
-      //     // return "<script type='module' src=\"/node_modules/.vite/deps/chunk-6NLOLHO3.js?v=fbc7fbaa\"></script><script type='module'>window.React = require_react();</script>";
-      //   } else if ($handle === 'react-dom') {
-      //     // return "";
-      //     // return "<script type='module' src=\"/global-react-dom.js\"></script>";
-      //   }
-      //   // } else {
-      //   //   return str_replace("<script ", "<script defer ", $tag);
-      //   // }
-      //   return $tag;
-      // }, 10, 3);
     }
 
     add_filter('admin_enqueue_scripts', function () {
 
       // The dependencies to enqueue, depending on whether the block editor is on this page
-      $deps = get_current_screen()->is_block_editor()
+      $deps = $this->screenIsBlockEditor(get_current_screen())
         ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf']
         : ['acf', 'react', 'react-dom', 'wp-hooks'];
 
@@ -266,10 +288,6 @@ class EDCore {
           );
         }
       }
-
-      // if (file_exists(ED()->themePath.$style)) {
-      //   wp_enqueue_style('theme_admin_css', ED()->themeURL.$style, [], filemtime(ED()->themePath.$style));
-      // }
     });
 
     add_filter('script_loader_tag', function ($tag, $handle, $src) {

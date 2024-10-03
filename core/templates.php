@@ -256,6 +256,7 @@ class EDTemplates {
         ];
 
         $tag = apply_filters('eddev/serverless-header-tag', $tag);
+
         if ($tag && !$tag->ignore) {
           $output[] = $tag;
         }

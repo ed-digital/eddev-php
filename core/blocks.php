@@ -81,14 +81,16 @@ class EDBlocks {
       $allowedBlocks = array_keys(self::$coreBlockTags);
 
       foreach ($blockTypes as $name => $def) {
-        // Exclude by post type, if a post type array has been specified
-        if (@is_array(($def['types']))) {
-          if (!in_array($post->post_type, $def['types'])) continue;
-        }
-        // Exclude by template
-        if ($post->post_type === 'page') {
-          if (@is_array($def['templates']) && @!in_array($templateName, $def['templates'])) {
-            continue;
+        if (!empty($post)) {
+          // Exclude by post type, if a post type array has been specified
+          if (@is_array(($def['types']))) {
+            if (!in_array($post->post_type, $def['types'])) continue;
+          }
+          // Exclude by template
+          if ($post->post_type === 'page') {
+            if (@is_array($def['templates']) && @!in_array($templateName, $def['templates'])) {
+              continue;
+            }
           }
         }
 
