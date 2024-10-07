@@ -30,7 +30,7 @@
           return $access;
         }
       
-        if ((preg_match('/users/i', $_SERVER['REQUEST_URI']) !== 0) ||(isset($_REQUEST['rest_route']) && (preg_match('/users/i', $_REQUEST['rest_route']) !== 0))) {
+        if ((preg_match('/\/users/i', $_SERVER['REQUEST_URI']) !== 0) ||(isset($_REQUEST['rest_route']) && (preg_match('/\/users/i', $_REQUEST['rest_route']) !== 0))) {
           return new \WP_Error(
             'rest_cannot_access',
             'Only authenticated users can access the User endpoint REST API.',
