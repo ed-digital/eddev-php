@@ -60,8 +60,7 @@ class EDCore {
     $this->enableDevUI();
     $this->enableDevReact();
 
-    edDisableComments();
-    edDisableEmojis();
+    EDWPHacks::apply();
 
     remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
     remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
@@ -80,7 +79,7 @@ class EDCore {
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
       add_action('parse_request', function () {
         header('Content-Type: application/json');
-        echo json_encode(EDTemplates::getDataForApp());
+        echo json_encode(EDTemplates::getFrontendApp());
         exit;
       });
     }
@@ -197,12 +196,9 @@ class EDCore {
       });
     }, 1, 1);
 
-    add_action('wp_head', [$this, 'trackingHead']);
-    add_action('wp_body_open', [$this, 'trackingBody']);
-    add_action('wp_footer', [$this, 'trackingFooter']);
-
     EDTemplates::init();
     EDBlocks::init();
+    EDTrackers::init();
 
     if ($this->isDev) {
       // Automatically update the .env file with debugging info
@@ -577,10 +573,6 @@ class EDCore {
     }
   }
 
-  function trackingHead() {
-    $this->tracking("head");
-  }
-
   /**
    * Creates a MySQL database table, and ensures it's kept up to date with the latest changes.
    * @param string $id A unique identifier for this migration. It can be the table name, or any other unique string. Changing the string will re-run the migration
@@ -589,89 +581,13 @@ class EDCore {
   function ensureTable($id, $createStatement) {
     EDDBMigrationManager::ensureDatabaseTable($id, $createStatement);
   }
-
-  function trackingBody() {
-    $this->tracking("body");
-  }
-
-  function trackingFooter() {
-    $this->tracking("footer");
-  }
-
-  // Prints out tracking codes from ed.config.json
-  function tracking($location) {
-    $tracking = @$this->getConfig()['tracking'];
-
-    if ($location === "head") {
-      if (@$tracking['tagManagerID']) {
-?>
-        <!-- Google Tag Manager [ED] -->
-        <script>
-          (function(w, d, s, l, i) {
-            w[l] = w[l] || [];
-            w[l].push({
-              'gtm.start': new Date().getTime(),
-              event: 'gtm.js'
-            });
-            var f = d.getElementsByTagName(s)[0],
-              j = d.createElement(s),
-              dl = l != 'dataLayer' ? '&l=' + l : '';
-            j.async = true;
-            j.src =
-              'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-            f.parentNode.insertBefore(j, f);
-          })(window, document, 'script', 'dataLayer', <?= json_encode($tracking['tagManagerID']) ?>);
-        </script>
-        <!-- End Google Tag Manager [ED] -->
-        <?
-      }
-      if (@$tracking['ga']) {
-        $ga = @$tracking['ga'];
-        if ($ga['version'] == '3') {
-        ?>
-          <!-- Google tag (gtag.js) [ED] -->
-          <script async src="https://www.googletagmanager.com/gtag/js?id=<?= $ga['trackingID'] ?>"></script>
-          <script>
-            window.dataLayer = window.dataLayer || [];
-
-            function gtag() {
-              dataLayer.push(arguments);
-            }
-            gtag('js', new Date());
-
-            gtag('config', '<?= $ga['trackingID'] ?>');
-          </script>
-        <?
-        } elseif ($ga['version'] == '4') {
-        ?>
-          <!-- Google tag (gtag.js) [ED] -->
-          <script async src="https://www.googletagmanager.com/gtag/js?id=<?= $ga['trackingID'] ?>"></script>
-          <script>
-            window.dataLayer = window.dataLayer || [];
-
-            function gtag() {
-              dataLayer.push(arguments);
-            }
-            gtag('js', new Date());
-
-            gtag('config', '<?= $ga['trackingID'] ?>');
-          </script>
-        <?
-        }
-      }
-    } else if ($location === "body") {
-      if (@$tracking['tagManagerID']) {
-        ?>
-        <!-- Google Tag Manager (noscript) [ED] -->
-        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?= $tracking['tagManagerID'] ?>" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-        <!-- End Google Tag Manager (noscript) [ED] -->
-<?
-      }
-    }
-  }
 }
 
-function ED(): EDCore {
+/**
+ * Returns the EDCore instance
+ * @return EDCore
+ */
+function ED() {
   if (EDCore::$instance) {
     return EDCore::$instance;
   } else {

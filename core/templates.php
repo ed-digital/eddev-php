@@ -53,15 +53,12 @@ class EDTemplates {
   private static function loadPageTemplates() {
     if (self::$templates) return;
     $themeInfo = EDThemeInfo::load();
-
     $templates = [];
-
     foreach ($themeInfo['templates'] as $template) {
       foreach ($template['postType'] as $postType) {
         $templates[$postType][$template['fileName']] = $template['title'];
       }
     }
-
     self::$templates = $templates;
   }
 
@@ -149,7 +146,7 @@ class EDTemplates {
       $data['viewData'] = self::getDataForTemplate($template);
       if (!$isPropsRequest || $_GET['_props'] === 'all') {
         AssetManifest::importChunk("views/_app.tsx", "modulepreload");
-        $data['appData'] = self::getDataForApp();
+        $data['appData'] = self::getAppQueryData();
       }
       if ($isJSX) {
         $data['viewType'] = 'react';
@@ -206,7 +203,7 @@ class EDTemplates {
     ];
   }
 
-  static function parseHeaderHTML($html) {
+  static function extractTags($html) {
     if (!$html) return [];
     $doc = new DOMDocument();
     @$doc->loadHTML(
@@ -215,10 +212,8 @@ class EDTemplates {
     );
 
     $output = [];
-
     $tagNames = ['title', 'meta', 'link', 'script', 'style'];
 
-    // Loop over all children inside the head tag
     foreach ($doc->documentElement->firstChild->childNodes as $el) {
       if ($el->nodeType === XML_ELEMENT_NODE) {
         $tagName = $el->tagName;
@@ -231,35 +226,53 @@ class EDTemplates {
         }
         $inner = $el->nodeValue;
 
-        $ignore = false;
-
-        if (@$attributes['data-ignore']) {
-          $ignore = true;
-        }
-
-        // Ignore wp-includes scripts and styles
-        if ($tagName === 'link' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$attributes["href"])) {
-          $ignore = true;
-        } else if ($tagName === 'script' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$attributes["src"])) {
-          $ignore = true;
-        } else if ($tagName === 'meta') {
-          if (@$attributes['name'] === "generator") {
-            $ignore = true;
-          }
+        if (isset($attributes['data-ignore'])) {
+          continue;
         }
 
         $tag = (object)[
           'tagName' => $tagName,
           'attributes' => $attributes,
-          'inner' => $inner,
-          'ignore' => $ignore
+          'inner' => $inner
         ];
+        $output[] = $tag;
+      }
+    }
 
-        $tag = apply_filters('eddev/serverless-header-tag', $tag);
+    return $output;
+  }
 
-        if ($tag && !$tag->ignore) {
-          $output[] = $tag;
+  static function parseHeaderHTML($html) {
+    $tags = self::extractTags($html);
+
+    $output = [];
+
+    // Loop over all children inside the head tag
+    foreach ($tags as $tag) {
+      $ignore = false;
+
+      if (@$tag->attributes['data-ignore']) {
+        $ignore = true;
+      }
+
+      // Ignore wp-includes scripts and styles
+      if ($tag->tagName === 'link' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$tag->attributes["href"])) {
+        $ignore = true;
+      } else if ($tag->tagName === 'script' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$tag->attributes["src"])) {
+        $ignore = true;
+      } else if ($tag->tagName === 'meta') {
+        if (@$tag->attributes['name'] === "generator") {
+          $ignore = true;
         }
+      }
+
+      // Give user code the chance to ignore/unignore tags
+      $tag->ignore = $ignore;
+      do_action('eddev/serverless-header-tag', $tag);
+
+      // If the tag is not ignored, add it to the output
+      if (!$tag->ignore) {
+        $output[] = $tag;
       }
     }
 
@@ -335,7 +348,7 @@ class EDTemplates {
     return $data;
   }
 
-  static function getDataForApp() {
+  static function getAppQueryData() {
     $queryFile = ED()->themePath . "/views/_app.graphql";
 
     $data = null;
@@ -360,5 +373,12 @@ class EDTemplates {
     }
 
     return $data;
+  }
+
+  static function getFrontendApp() {
+    return [
+      'appData' => self::getAppQueryData(),
+      'trackers' => EDTrackers::collectAll(),
+    ];
   }
 }
