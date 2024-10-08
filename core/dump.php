@@ -1,33 +1,32 @@
 <?php
 
-  function dump_as_string (...$args) {
-    $str = '';
-    foreach($args as $item) {
-      if(is_array($item) || is_object($item)) {
-        $str .= print_r($item, true);
-      } else {
-        $str .= json_encode($item);
-      }
-      $str .= " ";
+function dump_as_string(...$args) {
+  $str = '';
+  foreach ($args as $item) {
+    if (is_array($item) || is_object($item)) {
+      $str .= print_r($item, true);
+    } else {
+      $str .= json_encode($item);
     }
-    return $str;
+    $str .= " ";
   }
+  return $str;
+}
 
-  if (!function_exists('dump')) {
-    function dump(...$args) {
-      if(error_reporting() === 0) return;
-
-      echo "<pre># ";
-      echo htmlentities(dump_as_string(...$args));
-      echo "</pre>";
-    }
-  }
-
-
-  function ed_dump(...$args) {
-    if(error_reporting() === 0) return;
+if (!function_exists('dump')) {
+  function dump(...$args) {
+    if (error_reporting() === 0) return;
 
     echo "<pre># ";
     echo htmlentities(dump_as_string(...$args));
     echo "</pre>";
   }
+}
+
+function ed_dump(...$args) {
+  if (error_reporting() === 0) return;
+
+  echo "<pre># ";
+  echo htmlentities(dump_as_string(...$args));
+  echo "</pre>";
+}
