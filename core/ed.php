@@ -295,7 +295,7 @@ class EDCore {
 
     add_action('enqueue_block_editor_assets', function () {
       add_action('admin_print_scripts', function () {
-        $data = EDTemplates::getDataForApp();
+        $data = EDTemplates::getAppQueryData();
         echo "<script>window.__ED_APP_DATA = " . json_encode($data) . "</script>";
       });
     });
