@@ -115,23 +115,26 @@ class EDCore {
   }
 
   function getServerlessEndpoint() {
+    $value = "";
     if ($this->isLocalDev()) {
-      return $this->readEnvValue("DEBUG_SERVERLESS_ENDPOINT");
-    } else {
-      $hostname = $_SERVER['HTTP_HOST'];
-      $config = $this->getConfig();
-      if (@$config['serverless']['enabled'] && is_array($config['serverless']['endpoints'])) {
-        $fallback = "";
-        foreach ($config['serverless']['endpoints'] as $wpHost => $serverlessHost) {
-          if ($wpHost === "*") {
-            $fallback = "https://" . $serverlessHost;
-          }
-          if ($wpHost === $hostname) {
-            return "https://" . $serverlessHost;
-          }
+      $value = $this->readEnvValue("DEBUG_SERVERLESS_ENDPOINT");
+    }
+    if ($value) {
+      return $value;
+    }
+    $hostname = $_SERVER['HTTP_HOST'];
+    $config = $this->getConfig();
+    if (@$config['serverless']['enabled'] && is_array($config['serverless']['endpoints'])) {
+      $fallback = "";
+      foreach ($config['serverless']['endpoints'] as $wpHost => $serverlessHost) {
+        if ($wpHost === "*") {
+          $fallback = "https://" . $serverlessHost;
         }
-        return $fallback;
+        if ($wpHost === $hostname) {
+          return "https://" . $serverlessHost;
+        }
       }
+      return $fallback;
     }
     return null;
   }
