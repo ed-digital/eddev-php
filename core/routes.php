@@ -11,11 +11,34 @@ class Routes {
       return $query_vars;
     });
 
+    add_action('parse_query', [__CLASS__, 'handleCustomRoute'], 1);
+
     add_filter('template_include', ['Routes', 'filterTemplate'], 1);
 
-    add_filter('wp_title', ['Routes', 'filterTitle'], -1000, 1);
-    add_filter('wpseo_title', ['Routes', 'filterTitle'], -1000, 1);
-    add_filter('wpseo_frontend_presentation', ['Routes', 'filterOpenGraph'], -1000, 1);
+    add_filter('document_title_parts', [__CLASS__, 'filterTitleParts'], 0, 1);
+    add_filter('wp_title', [__CLASS__, 'filterTitle'], -1000, 1);
+    add_filter('wpseo_title', [__CLASS__, 'filterTitle'], -1000, 1);
+    add_filter('wpseo_frontend_presentation', [__CLASS__, 'filterOpenGraph'], -1000, 1);
+  }
+
+  /**
+   * Double-checks the custom route, and handles potential 404s
+   */
+  static function handleCustomRoute($query) {
+    if ($query->is_main_query() && self::isCustomRoute()) {
+      $route = self::getCustomRoute();
+      $query->set_home(false);
+      $query->set_front_page(false);
+      if (isset($route['is404'])) {
+        $params = self::getCustomRouteQueryVars();
+        if ($route['is404']($params)) {
+          $query->set_404();
+          status_header(404);
+          $query->is_404 = true;
+          set_query_var('custom_route', null);
+        }
+      }
+    }
   }
 
   static function registerRoute($pattern, $args) {
@@ -31,7 +54,6 @@ class Routes {
     }
     self::$routes[$key] = $args;
     add_rewrite_rule($pattern, $uri, $args['position'] ?? 'top');
-    // self::flush();
   }
 
   static function flush() {
@@ -98,6 +120,14 @@ class Routes {
       }
     }
     return $title;
+  }
+
+  static function filterTitleParts($parts) {
+    if (self::isCustomRoute()) {
+      $parts['title'] = self::filterTitle($parts['title']);
+      $parts['site'] = get_bloginfo('name', 'display');
+    }
+    return $parts;
   }
 
   static function filterOpenGraph($presentation) {
