@@ -128,7 +128,7 @@ if (class_exists("acf_field")) {
       } else {
 ?>
         <input data-settings="<?= esc_attr(json_encode($field)) ?>" type="hidden" name="<?= $field['name'] ?>" value="<?= esc_attr(json_encode($field['value'])) ?>" />
-<?
+<?php
       }
     }
 

@@ -91,7 +91,7 @@ class EDGravityForms {
           <option value="<?= $form['id'] ?>" <?= ($form['id'] == $field['value']) ? 'selected' : '' ?>><?= $form['title'] ?></option>
         <? endforeach ?>
       </select>
-<?
+<?php
       }
     ]);
   }
