@@ -150,7 +150,11 @@ class EDTemplates {
       }
       if ($isJSX) {
         $data['viewType'] = 'react';
-        AssetManifest::importChunk($cleanedTemplateName, "modulepreload");
+        if ($cleanedTemplateName === "views/_error.tsx") {
+          AssetManifest::importChunk("views/front-page.tsx", "modulepreload");
+        } else {
+          AssetManifest::importChunk($cleanedTemplateName, "modulepreload");
+        }
       } else {
         ob_start();
         include($template);
