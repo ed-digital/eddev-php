@@ -84,21 +84,21 @@ if (class_exists("acf_field")) {
       });
 
       // // Convert the database value to the normalized value
-      add_filter('graphql_acf_field_value', function ($value, $acf_field, $root, $id) {
-        if ($acf_field['type'] === $this->name) {
-          $loadValue = $this->hooks['loadValue'];
-          // $resolve = $this->hooks['resolve'];
-          if ($loadValue) {
-            $value = $loadValue($value, $id, $acf_field);
-          }
-          // if ($resolve) {
-          //   $value = $resolve($value, $acf_field, $root, $id);
-          // }
+      // add_filter('graphql_acf_field_value', function ($value, $acf_field, $root, $id) {
+      //   if ($acf_field['type'] === $this->name) {
+      //     $loadValue = $this->hooks['loadValue'];
+      //     // $resolve = $this->hooks['resolve'];
+      //     if ($loadValue) {
+      //       $value = $loadValue($value, $id, $acf_field);
+      //     }
+      //     // if ($resolve) {
+      //     //   $value = $resolve($value, $acf_field, $root, $id);
+      //     // }
 
-          return $value;
-        }
-        return $value;
-      }, 1, 4);
+      //     return $value;
+      //   }
+      //   return $value;
+      // }, 1, 4);
 
       add_filter('wpgraphql_acf_register_graphql_field', function ($resolver, $type_name, $field_name, $config) {
         // dump($config['acf_field']['type']);
@@ -155,9 +155,15 @@ if (class_exists("acf_field")) {
       */
 
     function load_value($value, $post_id, $field) {
+      $loadValue = $this->hooks['loadValue'];
+      if ($loadValue) {
+        $value = $loadValue($value, $post_id, $field);
+        return $value;
+      }
 
       if (is_string($value) && strlen($value) > 0) {
-        return json_decode($value, true);
+        $value = json_decode($value, true);
+        return $value;
       } else {
         return null;
       }
