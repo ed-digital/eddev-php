@@ -67,7 +67,7 @@ class QueryHandler {
       $cacheTime = 0;
     }
 
-    if (!early_user_logged_in()) {
+    if (true) {
       if ((int)$cacheTime) {
         header('Cache-Control: public, max-age=' . $cacheTime);
       } else {

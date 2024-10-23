@@ -17,16 +17,16 @@ if (!function_exists('dump')) {
   function dump(...$args) {
     if (error_reporting() === 0) return;
 
-    echo "<pre># ";
+    echo "\n<pre># ";
     echo htmlentities(dump_as_string(...$args));
-    echo "</pre>";
+    echo "</pre>\n\n";
   }
 }
 
 function ed_dump(...$args) {
   if (error_reporting() === 0) return;
 
-  echo "<pre># ";
+  echo "\n<pre># ";
   echo htmlentities(dump_as_string(...$args));
-  echo "</pre>";
+  echo "</pre>\n\n";
 }

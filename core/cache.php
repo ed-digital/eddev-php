@@ -40,8 +40,8 @@ function cached_graphql($args, $cacheTime = 0) {
   $key = md5(@$_SERVER['HTTP_HOST'] . "_" . json_encode($args));
   $cache = EDCache::withKey($key);
   // If the user is logged in, or the cache time is 0, clear the cache and return a fresh result
-  if (early_user_logged_in() || $cacheTime === 0 || ED()->isDev) {
-    $cache->clear();
+  if ($cacheTime === 0) {
+    // $cache->clear();
     return graphql($args);
   }
   if ($cache->hasValue()) {

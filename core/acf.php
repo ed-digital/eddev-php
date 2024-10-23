@@ -259,7 +259,6 @@ if (class_exists("acf_field")) {
       */
 
     function update_field($field) {
-
       return $field;
     }
   }

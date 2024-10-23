@@ -244,49 +244,66 @@ class EDCore {
     return false;
   }
 
+  function enqueueAdminScripts() {
+    // The dependencies to enqueue, depending on whether the block editor is on this page
+    $deps = $this->screenIsBlockEditor(get_current_screen())
+      ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf']
+      : ['acf', 'react', 'react-dom', 'wp-hooks'];
+
+    if (ED()->isDevProxy()) {
+      // If the dev proxy is currently being used, just enqueue the deps
+      foreach ($deps as $dep) {
+        wp_enqueue_script($dep);
+      }
+    } else {
+      AssetManifest::setup(false, "cms");
+      AssetManifest::importChunk(".eddev/dev-spa/entry.admin.tsx", 'main');
+      $adminEntry = AssetManifest::getEntryScript();
+      if (!$adminEntry) {
+        AssetManifest::importChunk(".eddev/prod-spa/entry.admin.tsx", 'main');
+        $adminEntry = AssetManifest::getEntryScript();
+      }
+      $adminEntryPath = str_replace(ED()->themeURL, ED()->themePath, $adminEntry);
+
+      if (file_exists($adminEntryPath)) {
+        wp_enqueue_script(
+          'theme_admin_js',
+          $adminEntry,
+          get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
+          filemtime($adminEntryPath)
+        );
+      }
+    }
+  }
+
   function adminScripts() {
     if (ED()->isDevProxy()) {
       add_action('admin_head', function () {
         // Add Vite HMR info
         echo "<!---VITE_HEADER--->";
+        echo "<template id='eddev-admin-iframe-head'><!---VITE_HEADER---></template>";
       });
 
       add_action('admin_footer', function () {
         echo "<!---VITE_FOOTER--->";
+        echo "<template id='eddev-admin-iframe-footer'><!---VITE_HEADER---></template>";
       });
     }
 
-    add_filter('admin_enqueue_scripts', function () {
-
-      // The dependencies to enqueue, depending on whether the block editor is on this page
-      $deps = $this->screenIsBlockEditor(get_current_screen())
-        ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf']
-        : ['acf', 'react', 'react-dom', 'wp-hooks'];
-
+    add_filter('block_editor_settings_all', function ($editor_settings, $context) {
       if (ED()->isDevProxy()) {
-        // If the dev proxy is currently being used, just enqueue the deps
-        foreach ($deps as $dep) {
-          wp_enqueue_script($dep);
-        }
       } else {
-        AssetManifest::setup(false, "cms");
-        AssetManifest::importChunk(".eddev/dev-spa/entry.admin.tsx", 'main');
-        $adminEntry = AssetManifest::getEntryScript();
-        if (!$adminEntry) {
-          AssetManifest::importChunk(".eddev/prod-spa/entry.admin.tsx", 'main');
-          $adminEntry = AssetManifest::getEntryScript();
-        }
-        $adminEntryPath = str_replace(ED()->themeURL, ED()->themePath, $adminEntry);
-
-        if (file_exists($adminEntryPath)) {
-          wp_enqueue_script(
-            'theme_admin_js',
-            $adminEntry,
-            get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
-            filemtime($adminEntryPath)
-          );
-        }
+        $editor_settings['__unstableResolvedAssets']['scripts'] .= '\n<script type="module" src="' . "https://agda.local/wp-content/themes/agda/dist/cms/main.admin.js?ver=1729034669" . '"></script>';
       }
+      return $editor_settings;
+    }, 10, 2);
+
+    add_filter('admin_enqueue_scripts', function () {
+      self::enqueueAdminScripts();
+    });
+
+    add_filter('enqueue_block_editor_assets', function () {
+      self::enqueueAdminScripts();
     });
 
     add_filter('script_loader_tag', function ($tag, $handle, $src) {

@@ -282,6 +282,10 @@ class BlockQL extends Config {
       return $id;
     }, 10, 2);
 
+    $this->registerBlockFields();
+  }
+
+  public function registerBlockFields() {
     // Add field groups
     $field_groups = acf_get_field_groups();
 
@@ -291,10 +295,12 @@ class BlockQL extends Config {
 
     // Track block field groups
     $blockFieldConfigs = [];
+    $postFieldConfigs = [];
 
     // Loop over each field group
     foreach ($field_groups as $field_group) {
 
+      // Get a list of block names this field group targets
       $blockNames = [];
       foreach ($field_group['location'] as $ruleset) {
         foreach ($ruleset as $rule) {
@@ -317,12 +323,52 @@ class BlockQL extends Config {
         $field_group['type'] = 'group';
         $field_group['name'] = $field_name;
         $field_group['sub_fields'] = acf_get_fields($field_group['key']);
+
+        if (isset($block['postmeta'])) {
+          $postMeta = $block['postmeta'];
+          if (isset($postMeta['fieldName']) && isset($postMeta['postTypes'])) {
+            $post_field = $postMeta['fieldName'];
+            foreach ($postMeta['postTypes'] as $postTypeName) {
+              $postTypeObject = get_post_type_object($postTypeName);
+              if (!empty($postTypeObject) && isset($postTypeObject->graphql_single_name)) {
+                $target_type = $postTypeObject->graphql_single_name;
+                $config = null;
+                if (!isset($postFieldConfigs[$target_type])) {
+                  $postFieldConfigs[$target_type] = [];
+                }
+                if (!isset($postFieldConfigs[$target_type][$post_field])) {
+                  $config = [
+                    'name' => $post_field,
+                    'acf_field' => $field_group,
+                    'acf_field_group' => null,
+                    'resolve' => function ($root) {
+                      return isset($root) ? $root : null;
+                    }
+                  ];
+                  $config['acf_field']['graphql_types'] = [$target_type];
+                  $config['acf_field']['name'] = $post_field;
+                  $config['acf_field']['graphql_field_name'] = $post_field;
+                  $config['acf_field']['show_in_graphql'] = 1;
+                  $qualifier = "Fields defined in the \"" . $field_group['title'] . "\" field group";
+                  $config['description'] = $field_group['description'] ? $field_group['description'] . ' | ' . $qualifier : $qualifier;
+                  $postFieldConfigs[$target_type][$post_field] = $config;
+                } else {
+                  $postFieldConfigs[$target_type][$post_field]['acf_field']['sub_fields'] = array_merge(
+                    $postFieldConfigs[$target_type][$post_field]['acf_field']['sub_fields'] ?? [],
+                    $field_group['sub_fields']
+                  );
+                }
+              }
+            }
+          }
+        }
+
         if (!isset($blockFieldConfigs[$blockName])) {
-          $config              = [
-            'name'            => $field_name,
-            'acf_field'       => $field_group,
+          $config = [
+            'name' => $field_name,
+            'acf_field' => $field_group,
             'acf_field_group' => null,
-            'resolve'         => function ($root) use ($field_group) {
+            'resolve' => function ($root) {
               return isset($root) ? $root : null;
             }
           ];
@@ -330,14 +376,15 @@ class BlockQL extends Config {
           $config['acf_field']['name'] = $field_name;
           $config['acf_field']['graphql_field_name'] = $field_name;
           $config['acf_field']['show_in_graphql'] = 1;
+          $config['postmeta_fields'] = [];
 
-          $qualifier = "Fields defined in the \"" . $field_group['title'] . "\" field type";
+          $qualifier = "Fields defined in the \"" . $field_group['title'] . "\" field group";
           $config['description'] = $field_group['description'] ? $field_group['description'] . ' | ' . $qualifier : $qualifier;
           $blockFieldConfigs[$blockName] = $config;
         } else {
           $blockFieldConfigs[$blockName]['acf_field']['sub_fields'] = array_merge(
             $blockFieldConfigs[$blockName]['acf_field']['sub_fields'] ?? [],
-            acf_get_fields($field_group)
+            $field_group['sub_fields']
           );
         }
       }
@@ -347,8 +394,13 @@ class BlockQL extends Config {
       $field_name = $config['name'];
       $this->register_graphql_field("CurrentBlock", $field_name, $config);
     }
-  }
 
+    foreach ($postFieldConfigs as $target_type => $fields) {
+      foreach ($fields as $field_name => $config) {
+        $this->register_graphql_field($target_type, $field_name, $config);
+      }
+    }
+  }
 
   public function getBlockProcessingRules() {
     $types = WP_Block_Type_Registry::get_instance()->get_all_registered();
