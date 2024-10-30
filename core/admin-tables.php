@@ -99,7 +99,7 @@ class EDAdminTables {
 
 		if ($query->get('post_type') == $this->postType) {
 			$orderby = $query->get('orderby');
-			if ($orderby) {
+			if ($orderby && is_string($orderby) && substr($orderby, 0, 4) == 'col_') {
 				$column = substr($orderby, 4);
 				if (isset($this->columnDefs[$column])) {
 					$def = $this->columnDefs[$column];
