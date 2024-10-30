@@ -1,12 +1,14 @@
 <?php
 
+use WPGraphQL\Utils\QueryLog;
+
 class FragmentLoader {
 
   static $cache;
 
   static function setup() {
-    add_filter('graphiql_external_fragments', function () {
-      return [FragmentLoader::getAll()];
+    add_filter('graphiql_external_fragments', function ($fragments) {
+      return array_merge($fragments, FragmentLoader::getOptimized());
     });
   }
 
@@ -21,6 +23,15 @@ class FragmentLoader {
       $output[] = file_get_contents($frag);
     }
     return "\n\n" . implode("\n\n", $output);
+  }
+
+  static function getOptimized() {
+    $file = ED()->themePath(".eddev/queries/fragments.json");
+    if (file_exists($file)) {
+      return json_decode(file_get_contents($file), true);
+    } else {
+      return [];
+    }
   }
 }
 
@@ -56,39 +67,66 @@ class QueryHandler {
     }, 10, 2);
   }
 
-  static function handleQueryRequest($data) {
-    $name = $data['name'];
-    $cacheTime = @ED()->getCacheConfig()['queries'] ?? 300;
+  static function shouldBypassCache($queryName = null) {
+    return false;
+    if (ED()->isDev) return true;
+    if (early_user_logged_in()) return true;
+    return apply_filters('graphql_bypass_cache', $queryName, false);
+  }
 
-    $query = self::loadQuery($name);
+  static function getCacheTime($name, $query) {
+    // Allow bypassing of the cache
+    $bypass = QueryHandler::shouldBypassCache($name);
+    if ($bypass) {
+      return 0;
+    }
 
-    $shouldCache = strpos($query, 'nocache') === false;
-    if (!$shouldCache) {
+    $config = ED()->getCacheConfig();
+    $type = "";
+    $cacheTime = 0;
+    if (strpos($name, "queries/") === 0) {
+      $type = "queries";
+    } else if (strpos($name, "views/") === 0) {
+      $type = "props";
+    }
+    if ($config && isset($config[$type])) {
+      $cacheTime = $config[$type];
+    }
+    if (preg_match("/#\s+cache[=:\s]+([0-9]+)/", $query, $matches)) {
+      $cacheTime = (int)trim($matches[1]);
+    } else if (strpos($query, 'nocache') !== false) {
       $cacheTime = 0;
     }
+    return apply_filters('graphql_cache_time', $cacheTime, $name);
+  }
 
-    if (true) {
-      if ((int)$cacheTime) {
-        header('Cache-Control: public, max-age=' . $cacheTime);
-      } else {
-        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-      }
-      header('X-ED-Cache-Duration: ' . (int)$cacheTime);
-      header('X-ED-Generated-At: ' . date("r"));
-      header('X-ED-URI: ' . $_SERVER['REQUEST_URI']);
+  static function handleQueryRequest($data) {
+    $name = $data['name'];
+
+    $name = self::getQueryFileName($name);
+    $query = QueryLoader::load($name);
+    $cacheTime = QueryHandler::getCacheTime($name, $query);
+
+    if ((int)$cacheTime) {
+      header('Cache-Control: public, max-age=' . $cacheTime);
+    } else {
+      header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     }
+    header('X-ED-Cache-Duration: ' . (int)$cacheTime);
+    header('X-ED-Generated-At: ' . date("r"));
 
     $params = @json_decode(stripslashes($_GET['params']), true);
     if (!$query) return self::error("Unknown query");
 
     if ($cacheTime > 0) {
       $result = cached_graphql([
-        "query" => $query . FragmentLoader::getAll(),
+        "name" => $name,
+        "query" => $query,
         "variables" => $params
       ], $cacheTime);
     } else {
       $result = graphql([
-        "query" => $query . FragmentLoader::getAll(),
+        "query" => $query,
         "variables" => $params,
       ]);
     }
@@ -105,14 +143,14 @@ class QueryHandler {
     $name = $data['name'];
     $params = $data->get_json_params();
 
-    $query = self::loadQuery($name);
+    $query = QueryLoader::load(self::getQueryFileName($name));
 
     early_user_logged_in();
 
     if (!$query) return self::error("Unknown query");
 
     $result = graphql([
-      "query" => $query . FragmentLoader::getAll(),
+      "query" => $query,
       "variables" => $params
     ]);
 
@@ -124,10 +162,8 @@ class QueryHandler {
     return $result;
   }
 
-
-  static function loadQuery($name) {
-    $path = ED()->themePath . "/queries/" . $name . ".graphql";
-    return file_get_contents($path);
+  static function getQueryFileName($name) {
+    return "queries/" . $name . ".graphql";
   }
 
   static function error($message) {
@@ -144,12 +180,26 @@ QueryHandler::setup();
 class QueryLoader {
   static $cache = [];
 
-  static function loadQueryFile($file) {
+  static private function loadByName($name) {
+    $optimizedFile = ED()->themePath(".eddev/queries/$name");
+    $defaultFile = ED()->themePath($name);
+    if (file_exists($optimizedFile)) {
+      return file_get_contents($optimizedFile);
+    } else if (file_exists($defaultFile)) {
+      // Load the source file and append the fragments
+      return file_get_contents($defaultFile) . "\n\n" . FragmentLoader::getAll();
+    }
+    return null;
+  }
+
+  static function load($file) {
+    $file = str_replace(ED()->themePath, '', $file);
     if (isset(self::$cache[$file])) {
       return self::$cache[$file];
     }
-    if (file_exists($file)) {
-      self::$cache[$file] = file_get_contents($file);
+    $value = self::loadByName($file);
+    if (is_string($value)) {
+      self::$cache[$file] = $value;
       return self::$cache[$file];
     } else {
       return null;

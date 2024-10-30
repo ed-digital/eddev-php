@@ -73,8 +73,6 @@ class EDCore {
       }
     });
 
-    add_action('admin_init', array($this, "_hookListingColumns"));
-
     // Return app data when requested.
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
       add_action('parse_request', function () {
@@ -83,6 +81,10 @@ class EDCore {
         exit;
       });
     }
+  }
+
+  function themePath($file) {
+    return $this->themePath . "/" . preg_replace("/^\//", "", $file);
   }
 
   function isDevProxy() {
@@ -98,7 +100,7 @@ class EDCore {
 
   function getCacheConfig() {
     $config = $this->getConfig();
-    $hostname = $_SERVER['HTTP_HOST'];
+    $hostname = preg_replace("/:[0-9]+/", "", $_SERVER['HTTP_HOST']);
     if (isset($config['cache'])) {
       if (isset($config['cache'][$hostname])) return $config['cache'][$hostname];
       if (isset($config['cache']["*"])) return $config['cache']["*"];
@@ -436,8 +438,9 @@ class EDCore {
     register_post_type($name, $args);
 
     if (@$args['adminColumns']) {
+      include_once(__DIR__ . "/admin-tables.php");
       // Save the columns to each post type
-      $this->postTypeColumns[$name] = $args['adminColumns'];
+      EDAdminTables::registerColumns($name, $args['adminColumns']);
     }
   }
 
@@ -580,17 +583,6 @@ class EDCore {
         return $ast->value;
       }
     ]);
-  }
-
-  public function _hookListingColumns() {
-    $postTypes = get_post_types();
-
-    foreach ($postTypes as $name => $label) {
-      $manager = new EDColumnManager($name, isset($this->postTypeColumns[$name]) ? $this->postTypeColumns[$name] : array());
-      $this->postTypeColumnManagers[$name] = $manager;
-      add_filter('manage_edit-' . $name . '_columns', array($manager, 'alterColumnLayout'), 16);
-      add_action('manage_' . $name . '_posts_custom_column', array($manager, 'printColumn'), 16);
-    }
   }
 
   /**

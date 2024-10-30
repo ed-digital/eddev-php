@@ -421,8 +421,8 @@ class BlockQL extends Config {
 
   public static function runBlockQuery($meta, $attributes, $postID) {
     $cacheKey = null;
-    $queryFile = ED()->themePath . "/blocks/" . $meta['id'] . ".graphql";
-    $contents = QueryLoader::loadQueryFile($queryFile);
+    $queryFile = "blocks/" . $meta['id'] . ".graphql";
+    $contents = QueryLoader::load($queryFile);
     if (!$contents) return;
 
     // If caching is support by this block (via Supports memo, then calculate the cache key and look for a stored value)
@@ -448,7 +448,7 @@ class BlockQL extends Config {
       acf_add_block_meta_values($attributes, $postID);
     }
     $result = graphql([
-      'query' => $contents . FragmentLoader::getAll(),
+      'query' => $contents,
       'variables' => $params
     ]);
 

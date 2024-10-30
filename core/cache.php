@@ -10,7 +10,7 @@ class EDCache {
 
   public function __construct($key) {
     $this->key = $key;
-    $this->value = get_transient('_cache_' . $this->key);
+    $this->value = get_transient('cache:' . $this->key);
   }
 
   public function getValue() {
@@ -22,11 +22,11 @@ class EDCache {
   }
 
   public function setValue($value, $expiry) {
-    set_transient("_cache_" . $this->key, $value, $expiry);
+    set_transient('cache:' . $this->key, $value, $expiry);
   }
 
   public function clear() {
-    delete_transient("_cache_" . $this->key);
+    delete_transient('cache:' . $this->key);
   }
 }
 
@@ -37,16 +37,23 @@ function early_user_logged_in() {
 
 // Caches GraphQL queries
 function cached_graphql($args, $cacheTime = 0) {
-  $key = md5(@$_SERVER['HTTP_HOST'] . "_" . json_encode($args));
-  $cache = EDCache::withKey($key);
-  // If the user is logged in, or the cache time is 0, clear the cache and return a fresh result
+  // If the user is logged in, or the cache time is 0, return a fresh result
   if ($cacheTime === 0) {
-    // $cache->clear();
     return graphql($args);
   }
+
+  // Determine the cache key
+  $key = md5(@$_SERVER['HTTP_HOST'] . "_" . json_encode($args));
+  if (isset($args['name'])) {
+    $key = $args['name'] . ":" . $key;
+  }
+
+  // Check the cache
+  $cache = EDCache::withKey($key);
   if ($cache->hasValue()) {
     return $cache->getValue();
   } else {
+    // Fetch the result and store it
     $result = graphql($args);
     $result['_generated'] = date('r');
     $cache->setValue($result, $cacheTime);

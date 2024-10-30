@@ -74,8 +74,10 @@ class EDTemplates {
     add_filter('template_include', function ($template) {
 
       // Cache and generation headers, for non-logged-in users
-      if (!early_user_logged_in()) {
-        $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
+      $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
+      $bypass = QueryHandler::shouldBypassCache();
+
+      if (!$bypass) {
         if ((int)$cacheTime) {
           header('Cache-Control: public, max-age=' . $cacheTime);
         }
@@ -333,11 +335,12 @@ class EDTemplates {
 
     if (file_exists($templateQueryFile)) {
       QueryMonitor::push($templateQueryFile, "view");
-      $query = file_get_contents($templateQueryFile);
-      $cacheConfig = ED()->getCacheConfig();
-      $cacheTime = isset($cacheConfig['props']) ? $cacheConfig['props'] : 0;
+      $name = trim(str_replace(ED()->themePath, "", $templateQueryFile), "/");
+      $query = QueryLoader::load($name);
+      $cacheTime = QueryHandler::getCacheTime($name, $query);
       $result = cached_graphql([
-        "query" => $query . FragmentLoader::getAll(),
+        "name" => $name,
+        "query" => $query,
         "variables" => $params
       ], $cacheTime);
       if (isset($result['errors'])) {
@@ -353,18 +356,19 @@ class EDTemplates {
   }
 
   static function getAppQueryData() {
-    $queryFile = ED()->themePath . "/views/_app.graphql";
+    $queryFile = "views/_app.graphql";
 
     $data = null;
 
     $params = [];
+    $query = QueryLoader::load($queryFile);
 
-    if (file_exists($queryFile)) {
+    if (is_string($query)) {
       QueryMonitor::push($queryFile, "app");
-      $query = file_get_contents($queryFile);
-      $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
+      $cacheTime = QueryHandler::getCacheTime($queryFile, $query);
       $result = cached_graphql([
-        "query" => $query . FragmentLoader::getAll(),
+        "name" => $queryFile,
+        "query" => $query,
         "variables" => $params
       ], $cacheTime);
       if (isset($result['errors'])) {
