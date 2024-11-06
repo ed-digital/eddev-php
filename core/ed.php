@@ -66,12 +66,8 @@ class EDCore {
     remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
     remove_action('wp_body_open', 'wp_global_styles_render_svg_filters');
 
-    add_action('wp_head', function () {
-      $endpoint = $this->getServerlessEndpoint();
-      if ($endpoint) {
-        echo "\n<script type=\"text/javascript\">window.SERVERLESS_ENDPOINT = " . json_encode($endpoint . "/") . "</script>\n";
-      }
-    });
+    add_action('wp_head', [$this, 'injectServerlessEndpoint']);
+    add_action('admin_head', [$this, 'injectServerlessEndpoint']);
 
     // Return app data when requested.
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
@@ -80,6 +76,13 @@ class EDCore {
         echo json_encode(EDTemplates::getFrontendApp());
         exit;
       });
+    }
+  }
+
+  function injectServerlessEndpoint() {
+    $endpoint = $this->getServerlessEndpoint();
+    if ($endpoint) {
+      echo "\n<script type=\"text/javascript\">window.SERVERLESS_ENDPOINT = " . json_encode($endpoint . "/") . "</script>\n";
     }
   }
 
