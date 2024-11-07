@@ -690,7 +690,7 @@ class BlockQL extends Config {
     }
     foreach ($filter as $cond) {
       // Match by ACF block name or ED block name
-      if (strpos($cond, '*') !== false) {
+      if (strpos($cond, '*') !== false && function_exists('fnmatch')) {
         if (isset($meta['id']) && fnmatch($cond, $meta['id'])) {
           return true;
         }
@@ -706,7 +706,7 @@ class BlockQL extends Config {
         }
       }
       // Match by flag key/value
-      if (is_array($meta['flags'])) {
+      if (isset($meta['flags']) && is_array($meta['flags'])) {
         if (preg_match("/^([^:=]+)=([^:=]+)$/", $cond, $matches)) {
           $key = $matches[1];
           $val = $matches[2];
