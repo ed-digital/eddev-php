@@ -559,13 +559,20 @@ class BlockQL extends Config {
   }
 
   public function processBlocks($blocks, $postID, $args = [
-    'include' => [],
-    'exclude' => [],
+    'include' => null,
+    'exclude' => null,
     'limit' => null,
     'maxDepth' => null,
     'flattenExcluded' => false
   ]) {
-    if ($args['maxDepth'] === 0) return [];
+    $args = [
+      'include' => isset($args['include']) ? $args['include'] : null,
+      'exclude' => isset($args['exclude']) ? $args['exclude'] : null,
+      'limit' => isset($args['limit']) ? $args['limit'] : null,
+      'maxDepth' => isset($args['maxDepth']) ? $args['maxDepth'] : null,
+      'flattenExcluded' => isset($args['flattenExcluded']) ? $args['flattenExcluded'] : false
+    ];
+
     // Expand pattern blocks
     $expanded = [];
     foreach ($blocks as $block) {
@@ -594,7 +601,7 @@ class BlockQL extends Config {
       }
     });
 
-    $limit = isset($args['limit']) && (int)$args['limit'] > 0 ? (int)$args['limit'] : null;
+    $limit = (int)$args['limit'] > 0 ? (int)$args['limit'] : null;
     unset($args['limit']);
 
     // Process each block
@@ -622,13 +629,13 @@ class BlockQL extends Config {
 
       // Apply include/exclude filters
       if ($meta) {
-        if (isset($args['include']) && count($args['include'])) {
+        if (is_array($args['include']) && count($args['include'])) {
           $matches = self::matchBlock($meta, $block, $args['include']);
           if (!$matches) {
             $included = false;
           }
         }
-        if (isset($args['exclude']) && count($args['exclude'])) {
+        if (is_array($args['exclude']) && count($args['exclude'])) {
           $matches = self::matchBlock($meta, $block, $args['exclude']);
           if ($matches) {
             $included = false;
