@@ -46,8 +46,6 @@ class EDBlocks {
         'title' => 'Layout',
         'icon' => ''
       );
-      // dump($categories);
-      // exit;
       return $categories;
     });
 
@@ -104,9 +102,14 @@ class EDBlocks {
     }, 2, 3);
   }
 
-  static function getBlock($block) {
-    if (isset(self::$blocks[$block])) {
-      return self::$blocks[$block];
+  static function getBlock($name, $fallback = false) {
+    if (isset(self::$blocks[$name])) {
+      return self::$blocks[$name];
+    }
+    if ($fallback) {
+      return [
+        'id' => $name
+      ];
     }
     return null;
   }
@@ -269,9 +272,31 @@ class BlockQL extends Config {
     register_graphql_field('ContentNode', 'contentBlocks', [
       'type' => ['non_null' => 'ContentBlocks'],
       'description' => "The current Gutenberg block in context.",
+      'args' => [
+        'include' => [
+          'type' => ['list_of' => ['non_null' => 'String']],
+          'description' => 'Include only the matching blocks. You can specify a list of block names or tags, use flags as "key=value" pairs. Block names can use wildcards, like "blog/*".'
+        ],
+        'exclude' => [
+          'type' => ['list_of' => ['non_null' => 'String']],
+          'description' => 'Exclude only the matching blocks. You can specify a list of block names or tags, use flags as "key=value" pairs. Block names can use wildcards, like "blog/*".'
+        ],
+        'flattenExcluded' => [
+          'type' => 'Boolean',
+          'description' => 'When a block is excluded by a filter, replace it with its inner blocks.'
+        ],
+        'maxDepth' => [
+          'type' => 'Int',
+          'description' => 'Maximum inner blocks depth to include.'
+        ],
+        'limit' => [
+          'type' => 'Int',
+          'description' => 'Limit the number of top-level blocks returned'
+        ]
+      ],
       'resolve' => function ($root, $args, $context, $info) {
         $post = get_post($root->ID);
-        return $this->parseBlocks($post->post_content, $root->ID);
+        return $this->processBlocks(parse_blocks($post->post_content), $root->ID, $args);
       }
     ]);
 
@@ -533,7 +558,14 @@ class BlockQL extends Config {
     }
   }
 
-  public function processBlocks($blocks, $postID) {
+  public function processBlocks($blocks, $postID, $args = [
+    'include' => [],
+    'exclude' => [],
+    'limit' => null,
+    'maxDepth' => null,
+    'flattenExcluded' => false
+  ]) {
+    if ($args['maxDepth'] === 0) return [];
     // Expand pattern blocks
     $expanded = [];
     foreach ($blocks as $block) {
@@ -562,36 +594,129 @@ class BlockQL extends Config {
       }
     });
 
+    $limit = isset($args['limit']) && (int)$args['limit'] > 0 ? (int)$args['limit'] : null;
+    unset($args['limit']);
+
     // Process each block
     $input = $blocks;
     $blocks = [];
     foreach ($input as $block) {
-      $meta = EDBlocks::getBlock($block['blockName']);
+      // Apply limit
+      if ($limit > 0 && count($blocks) >= $limit) break;
+
+      // Get block meta
+      $meta = EDBlocks::getBlock($block['blockName'], true);
+
+      $included = true;
+      $childrenOnly = false;
+
+      // Handle frontendMode property
       if ($meta && isset($meta['frontendMode'])) {
         if ($meta['frontendMode'] === 'hidden') {
           continue;
         } else if ($meta['frontendMode'] === 'childrenOnly') {
-          if (is_array(@$block['innerBlocks']) && count(@$block['innerBlocks'])) {
-            $children = $this->processBlocks($block['innerBlocks'], $postID);
-            foreach ($children as $block) {
-              $blocks[] = $block;
-            }
-          }
-          continue;
+          $childrenOnly = true;
+          $included = false;
         }
       }
-      $block = $this->processSingleBlock($block, $postID);
-      if (isset($block['innerBlocks']) && is_array($block['innerBlocks']) && count($block['innerBlocks'])) {
-        $block['innerBlocks'] = $this->processBlocks($block['innerBlocks'], $postID);
+
+      // Apply include/exclude filters
+      if ($meta) {
+        if (isset($args['include']) && count($args['include'])) {
+          $matches = self::matchBlock($meta, $block, $args['include']);
+          if (!$matches) {
+            $included = false;
+          }
+        }
+        if (isset($args['exclude']) && count($args['exclude'])) {
+          $matches = self::matchBlock($meta, $block, $args['exclude']);
+          if ($matches) {
+            $included = false;
+          }
+        }
       }
-      $blocks[] = $block;
+
+      if ($args['flattenExcluded'] && !$included) {
+        $childrenOnly = true;
+      }
+
+      if ($childrenOnly) {
+        if (is_array(@$block['innerBlocks']) && count(@$block['innerBlocks'])) {
+          $children = $this->processBlocks($block['innerBlocks'], $postID, [
+            'include' => $args['include'],
+            'exclude' => $args['exclude'],
+            'limit' => $limit,
+            'maxDepth' => $args['maxDepth'] - 1
+          ]);
+          foreach ($children as $block) {
+            $blocks[] = $block;
+          }
+        }
+        continue;
+      }
+
+      if ($included) {
+        $block = $this->processSingleBlock($block, $postID);
+        if (isset($block['innerBlocks']) && is_array($block['innerBlocks']) && count($block['innerBlocks'])) {
+          $block['innerBlocks'] = $this->processBlocks($block['innerBlocks'], $postID, [
+            'include' => $args['include'],
+            'exclude' => $args['exclude'],
+            'limit' => $limit,
+            'maxDepth' => $args['maxDepth'] - 1
+          ]);
+        }
+        $blocks[] = $block;
+      }
     }
 
     // Group blocks
     if (count(EDBlocks::$blockGroupTargets) > 0) {
       $blocks = $this->groupBlocks($blocks);
     }
+
     return $blocks;
+  }
+
+  public function matchBlock($meta, $block, $filter) {
+    if (!is_array($filter)) {
+      return true;
+    }
+    foreach ($filter as $cond) {
+      // Match by ACF block name or ED block name
+      if (strpos($cond, '*') !== false) {
+        if (isset($meta['id']) && fnmatch($cond, $meta['id'])) {
+          return true;
+        }
+        if (isset($meta['acfName']) && fnmatch($cond, $meta['acfName'])) {
+          return true;
+        }
+      } else {
+        if (isset($meta['id']) && $cond === $meta['id']) {
+          return true;
+        }
+        if (isset($meta['acfName']) && $cond === $meta['acfName']) {
+          return true;
+        }
+      }
+      // Match by flag key/value
+      if (is_array($meta['flags'])) {
+        if (preg_match("/^([^:=]+)=([^:=]+)$/", $cond, $matches)) {
+          $key = $matches[1];
+          $val = $matches[2];
+          if (isset($meta['flags'][$key])) {
+            $flagVal = $meta['flags'][$key];
+            if ($flagVal == $val) {
+              return true;
+            }
+          }
+        }
+      }
+      // Match by tag
+      if (isset($meta['tags']) && in_array($cond, $meta['tags'])) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public function groupBlocks($blocks) {
