@@ -265,7 +265,7 @@ class BlockQL extends Config {
         return $value;
       },
       "parseLiteral" => function ($value) {
-        return $value;
+        return $value->value;
       }
     ]);
 
@@ -514,10 +514,6 @@ class BlockQL extends Config {
     return false;
   }
 
-  public function isCoreInlineBlock($blockName) {
-    return false;
-  }
-
   public function processSingleBlock($block, $postID) {
     if (strpos($block['blockName'], "acf/") === 0) {
       // ACF blocks should have their 
@@ -536,6 +532,15 @@ class BlockQL extends Config {
       $block['props'] = $this->runBlockQuery($meta, $block['attrs'], $postID);
       if (isset($block['attrs']['inline'])) {
         $block['inline'] = $block['attrs']['inline'];
+      }
+      if (isset($block['attrs']['values'])) {
+        $block['values'] = [];
+        foreach ($block['attrs']['values'] as $type => $values) {
+          $block['values'] = [];
+          foreach ($values as $key => $value) {
+            $block['values'][$type][$key] = EDInlineTypes::resolveValue($type, $value);
+          }
+        }
       }
       $block['rule'] = 'react';
       unset($block['wpClassName']);

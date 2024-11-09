@@ -6,17 +6,19 @@ class ACFSyncEnforcer {
       $acf = acf_get_instance('ACF_Admin_Field_Groups');
       if (@$_GET['post']) {
         $post = get_post($_GET['post']);
-        if ($post->post_type == 'acf-field-group') {
-          $acf->setup_sync();
-          $acf->check_sync();
-          $acf->check_duplicate();
-          foreach ($acf->sync as $sync) {
-            if ($sync['ID'] == $_GET['post']) {
-              add_action('admin_notices', function () use ($acf) {
-                echo '<div class="notice notice-error"><p>Dan here — this field group has been modified externally by Git, and needs to be synced before it can be edited.<br /><a href="/wp-admin/edit.php?post_type=acf-field-group&post_status=sync">Continue</a></p></div>';
-                echo '<style>#poststuff { display: none; }</style>';
-                // echo $acf->render_admin_table_column_local_status($sync);
-              });
+        if ($post) {
+          if ($post->post_type == 'acf-field-group') {
+            $acf->setup_sync();
+            $acf->check_sync();
+            $acf->check_duplicate();
+            foreach ($acf->sync as $sync) {
+              if ($sync['ID'] == $_GET['post']) {
+                add_action('admin_notices', function () use ($acf) {
+                  echo '<div class="notice notice-error"><p>Dan here — this field group has been modified externally by Git, and needs to be synced before it can be edited.<br /><a href="/wp-admin/edit.php?post_type=acf-field-group&post_status=sync">Continue</a></p></div>';
+                  echo '<style>#poststuff { display: none; }</style>';
+                  // echo $acf->render_admin_table_column_local_status($sync);
+                });
+              }
             }
           }
         }
@@ -101,8 +103,6 @@ if (class_exists("acf_field")) {
       // }, 1, 4);
 
       add_filter('wpgraphql_acf_register_graphql_field', function ($resolver, $type_name, $field_name, $config) {
-        // dump($config['acf_field']['type']);
-        // echo '\n';
         if ($config['acf_field']['type'] === $this->name) {
           $resolver['type'] = $this->graphqlTypeName;
           if ($this->hooks['resolve']) {
@@ -112,9 +112,6 @@ if (class_exists("acf_field")) {
               return $this->hooks['resolve']($root, $args, $context, $info, $value);
             };
           }
-          // dump($this->graphqlTypeName, $resolver);
-          // echo "\n";
-          // exit;
         }
         return $resolver;
       }, 1, 4);

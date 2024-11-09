@@ -14,6 +14,8 @@ class EDCore {
 
   public $views = [];
 
+  private $enqueuedAdmin = false;
+
   static function boot() {
     EDCore::$instance = new EDCore();
   }
@@ -250,6 +252,8 @@ class EDCore {
   }
 
   function enqueueAdminScripts() {
+    if ($this->enqueuedAdmin) return;
+    $this->enqueuedAdmin = true;
     // The dependencies to enqueue, depending on whether the block editor is on this page
     $deps = $this->screenIsBlockEditor(get_current_screen())
       ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf']
@@ -570,6 +574,17 @@ class EDCore {
   function registerFieldType($name, $args) {
     if (class_exists('EDACFField')) {
       return new EDACFField($name, $args);
+    }
+  }
+
+  function registerEnumFieldType($name, $args) {
+    $install = function () use ($name, $args) {
+      $class = __getACFEnumClass($args['type']);
+      new $class($name, $args);
+    };
+    add_action("acf/include_field_types", $install);
+    if (acf_did('init')) {
+      $install();
     }
   }
 
