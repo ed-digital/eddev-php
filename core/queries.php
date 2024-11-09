@@ -68,10 +68,10 @@ class QueryHandler {
   }
 
   static function shouldBypassCache($queryName = null) {
-    return false;
-    if (ED()->isDev) return true;
-    if (early_user_logged_in()) return true;
-    return apply_filters('graphql_bypass_cache', $queryName, false);
+    $result = false;
+    if (ED()->isDev) $result = true;
+    if (early_user_logged_in()) $result = true;
+    return apply_filters('graphql_bypass_cache', $result, $queryName);
   }
 
   static function getCacheTime($name, $query) {

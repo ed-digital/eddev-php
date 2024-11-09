@@ -87,14 +87,19 @@ class EDTemplates {
       }
 
       $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
-      $isPropsRequest = ED()->isPropsRequest();
-      $_content = "";
-      $cleanedTemplateName = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
+      $templateFile = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
 
-      QueryMonitor::push($cleanedTemplateName, "props");
+      // Is this a JSON request? Or a regular page view?
+      $isPropsRequest = isset($_GET['_props']) && !!$_GET['_props'];
+      $handleAssets = !$isPropsRequest;
+      $includeAppData = (isset($_GET['_props']) && $_GET['_props'] === 'all') || !$isPropsRequest;
+      $debugQueries = $isPropsRequest && (ED()->isDev || isset($_GET['_debug']));
 
-      if ($isPropsRequest && ED()->isDev) {
+      QueryMonitor::push($templateFile, 'template');
+
+      if ($debugQueries) {
         set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+          if ($errno === 2) return;
           QueryMonitor::logError([
             'type' => 'php',
             'code' => $errno,
@@ -105,58 +110,27 @@ class EDTemplates {
         });
       }
 
-
-      // Test for a redirect, via the Redirection plugin
-      if (class_exists('Redirection')) {
-        add_action('redirection_matched', function ($mod, $items, $redirect) {
-          if ($_GET['debug']) {
-            dump("redirection_matched", [
-              "mod" => $mod,
-              "items" => $items,
-              "redirect" => $redirect
-            ]);
-            exit;
-          }
-          if (@$redirect[0]) {
-            $url = $redirect[0]->get_action_data();
-            $data = unserialize($url);
-            $code = $redirect[0]->get_action_code();
-            echo json_encode([
-              "redirect" => $data['url_from'],
-              "code" => $code
-            ]);
-            exit;
-          }
-        }, 3, 10);
-        $redirection = Redirection::init();
-        $redModule = $redirection->get_module();
-        if ($redModule) {
-          $redModule->init();
-        }
-      }
-
-      AssetManifest::setup(@$_GET['_ssr'] == "1");
+      // Load the asset manifest
+      AssetManifest::setup(!$handleAssets);
       AssetManifest::importChunk("virtual:eddev-bootup", "main");
-
-      QueryMonitor::push($cleanedTemplateName, 'template');
+      AssetManifest::importChunk("views/_app.tsx", "modulepreload");
 
       // Generate the data
       $data = [
-        'view' => preg_replace("/(^views\/|\.tsx)/", "", $cleanedTemplateName),
+        'view' => preg_replace("/(^views\/|\.tsx)/", "", $templateFile),
         'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
       ];
       $data['viewData'] = self::getDataForTemplate($template);
-      if (!$isPropsRequest || $_GET['_props'] === 'all') {
-        AssetManifest::importChunk("views/_app.tsx", "modulepreload");
+      if ($includeAppData) {
         $data['appData'] = self::getAppQueryData();
       }
       if ($isJSX) {
         $data['viewType'] = 'react';
-        if ($cleanedTemplateName === "views/_error.tsx") {
-          AssetManifest::importChunk("views/page.tsx", "modulepreload");
-        } else {
-          AssetManifest::importChunk($cleanedTemplateName, "modulepreload");
-        }
+        // if ($templateFile === "views/_error.tsx") {
+        //   AssetManifest::importChunk("views/page.tsx", "modulepreload");
+        // } else {
+        AssetManifest::importChunk($templateFile, "modulepreload");
+        // }
       } else {
         ob_start();
         include($template);
@@ -331,11 +305,11 @@ class EDTemplates {
     $data = ['data' => null];
 
     // Does a .graphql file exist?
-    $templateQueryFile = preg_replace("/\.(tsx|jsx|js|ts|php)$/i", ".graphql", $template);
+    $queryFile = preg_replace("/\.(tsx|jsx|js|ts|php)$/i", ".graphql", $template);
 
-    if (file_exists($templateQueryFile)) {
-      QueryMonitor::push($templateQueryFile, "view");
-      $name = trim(str_replace(ED()->themePath, "", $templateQueryFile), "/");
+    if (file_exists($queryFile)) {
+      $name = trim(str_replace(ED()->themePath, "", $queryFile), "/");
+      QueryMonitor::push($name, "view");
       $query = QueryLoader::load($name);
       $cacheTime = QueryHandler::getCacheTime($name, $query);
       $result = cached_graphql([
@@ -343,12 +317,18 @@ class EDTemplates {
         "query" => $query,
         "variables" => $params
       ], $cacheTime);
+
+      // Log any errors
       if (isset($result['errors'])) {
         foreach ($result['errors'] as $err) {
           QueryMonitor::logError($err['message']);
         }
       }
-      QueryMonitor::pop();
+      $item = QueryMonitor::pop();
+      if (isset($result['_from_cache'])) {
+        $item->fromCache = true;
+      }
+
       $data = $result;
     }
 
@@ -364,19 +344,26 @@ class EDTemplates {
     $query = QueryLoader::load($queryFile);
 
     if (is_string($query)) {
-      QueryMonitor::push($queryFile, "app");
       $cacheTime = QueryHandler::getCacheTime($queryFile, $query);
+      QueryMonitor::push($queryFile, "app");
       $result = cached_graphql([
         "name" => $queryFile,
         "query" => $query,
-        "variables" => $params
+        "variables" => $params,
+        "label" => "app"
       ], $cacheTime);
+
+      // Log any errors
       if (isset($result['errors'])) {
         foreach ($result['errors'] as $err) {
           QueryMonitor::logError($err['message']);
         }
       }
-      QueryMonitor::pop();
+
+      $item = QueryMonitor::pop();
+      if (isset($result['_from_cache'])) {
+        $item->fromCache = true;
+      }
       $data = $result;
     }
 

@@ -357,10 +357,6 @@ class EDCore {
     }
   }
 
-  function isPropsRequest() {
-    return isset($_GET['_props']);
-  }
-
   private function updateDevFiles() {
     $this->updateGraphQLConfigFile();
     $this->updateEnv();

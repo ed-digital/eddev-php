@@ -10,7 +10,8 @@ class QueryMonitor {
       "started" => microtime(true),
       "finished" => -1,
       "duration" => -1,
-      "errors" => []
+      "errors" => [],
+      "fromCache" => false,
     ];
   }
 
@@ -20,6 +21,7 @@ class QueryMonitor {
 
   static function logError($message) {
     $ctx = self::current();
+    if (!$ctx) return;
     $ctx->errors[] = $message;
   }
 

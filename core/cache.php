@@ -51,7 +51,9 @@ function cached_graphql($args, $cacheTime = 0) {
   // Check the cache
   $cache = EDCache::withKey($key);
   if ($cache->hasValue()) {
-    return $cache->getValue();
+    $value = $cache->getValue();
+    $value['_from_cache'] = true;
+    return $value;
   } else {
     // Fetch the result and store it
     $result = graphql($args);
