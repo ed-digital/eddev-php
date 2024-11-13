@@ -244,7 +244,7 @@ class EDCore {
 
   private function screenIsBlockEditor($screen) {
     try {
-      return $screen->is_block_editor === true || $screen->base === "site-editor" || $screen->is_block_editor();
+      return @$screen->is_block_editor === true || @$screen->base === "site-editor" || @$screen->is_block_editor();
     } catch (Error $err) {
     } catch (Exception $err) {
     }
@@ -275,10 +275,11 @@ class EDCore {
       $adminEntryPath = str_replace(ED()->themeURL, ED()->themePath, $adminEntry);
 
       if (file_exists($adminEntryPath)) {
+        $screen = @get_current_screen();
         wp_enqueue_script(
           'theme_admin_js',
           $adminEntry,
-          get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
+          ($screen && @$screen->is_block_editor()) ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
           filemtime($adminEntryPath)
         );
       }

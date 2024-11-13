@@ -70,7 +70,7 @@ class QueryHandler {
   static function shouldBypassCache($queryName = null) {
     $result = false;
     if (ED()->isDev) $result = true;
-    if (early_user_logged_in()) $result = true;
+    if (early_user_logged_in() || current_user_can("edit_posts")) $result = true;
     return apply_filters('graphql_bypass_cache', $result, $queryName);
   }
 
