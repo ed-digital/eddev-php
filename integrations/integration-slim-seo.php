@@ -4,7 +4,6 @@ class SlimSEOIntegration {
   static function init() {
     add_action('slim_seo_init', function ($plugin) {
       $plugin->disable('breadcrumbs');
-      $plugin->disable('schema');
       $plugin->disable('notifications');
       $plugin->disable('feed');
       $plugin->disable('settings_term');
@@ -14,6 +13,10 @@ class SlimSEOIntegration {
       $excerpt = get_the_excerpt($post);
       return $excerpt;
     }, 10, 2);
+
+    add_filter("slim_seo_schema_author_enable", '__return_false');
+    add_filter('slim_seo_meta_author', '__return_false');
+    add_filter('slim_seo_linkedin_author', '__return_false');
   }
 }
 SlimSEOIntegration::init();
