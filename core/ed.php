@@ -71,6 +71,11 @@ class EDCore {
     add_action('wp_head', [$this, 'injectServerlessEndpoint']);
     add_action('admin_head', [$this, 'injectServerlessEndpoint']);
 
+    $configFile = $this->themePath . "/backend/config.php";
+    if (file_exists($configFile)) {
+      include_once($configFile);
+    }
+
     // Return app data when requested.
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
       add_action('parse_request', function () {
@@ -79,6 +84,9 @@ class EDCore {
         exit;
       });
     }
+
+    include_once(__DIR__ . "/../integrations/load-integrations.php");
+    ed_detect_integrations();
   }
 
   function injectServerlessEndpoint() {
@@ -441,11 +449,11 @@ class EDCore {
     }
     register_post_type($name, $args);
 
-    if (@$args['adminColumns']) {
-      include_once(__DIR__ . "/admin-tables.php");
-      // Save the columns to each post type
-      EDAdminTables::registerColumns($name, $args['adminColumns']);
-    }
+    // if (@$args['admin_columns']) {
+    //   include_once(__DIR__ . "/admin-tables.php");
+    //   // Save the columns to each post type
+    //   EDAdminTables::registerColumns($name, $args['admin_columns']);
+    // }
   }
 
   /**

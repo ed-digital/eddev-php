@@ -86,14 +86,27 @@ class EDTemplates {
         header('X-ED-URI: ' . $_SERVER['REQUEST_URI']);
       }
 
-      $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
-      $templateFile = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
-
       // Is this a JSON request? Or a regular page view?
       $isPropsRequest = isset($_GET['_props']) && !!$_GET['_props'];
       $handleAssets = !$isPropsRequest;
       $includeAppData = (isset($_GET['_props']) && $_GET['_props'] === 'all') || !$isPropsRequest;
       $debugQueries = $isPropsRequest && (ED()->isDev || isset($_GET['_debug']));
+
+      // Are we redirecting?
+      $redirect = apply_filters('ed_maybe_redirect', null);
+      if ($redirect && isset($redirect['url'])) {
+        if ($isPropsRequest) {
+          echo json_encode([
+            'redirect' => $redirect['url'],
+            'status' => isset($redirect['status']) ? $redirect['status'] : 301
+          ]);
+          exit;
+        }
+      }
+
+      $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
+      $templateFile = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
+
 
       QueryMonitor::push($templateFile, 'template');
 

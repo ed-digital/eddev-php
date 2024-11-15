@@ -2,10 +2,8 @@
 
 class EDAdminTables {
 
-	public $columnDefs = array();
+	public $columnDefs = [];
 	public $postType = null;
-
-	static $tables = [];
 
 	public function __construct($postType, $defs) {
 		$this->postType = $postType;
@@ -20,22 +18,19 @@ class EDAdminTables {
 		add_action('admin_init', [__CLASS__, "initAdmin"]);
 	}
 
-	static function registerColumns($postType, $defs) {
-		self::$tables[$postType] = $defs;
-	}
-
 	static function initAdmin() {
 		$postTypes = get_post_types();
 
 		foreach ($postTypes as $name => $label) {
-			$manager = new EDAdminTables($name, isset(self::$tables[$name]) ? self::$tables[$name] : array());
+			$object = get_post_type_object($name);
+			$manager = new EDAdminTables($name, $object->adminColumns ?? $object->admin_columns ?? []);
 		}
 	}
 
 	public function alterColumnLayout($original) {
 
 		// Create a pool of all the items
-		$cols = array();
+		$cols = [];
 
 		// Add original items first
 		$index = 0;
@@ -64,7 +59,7 @@ class EDAdminTables {
 			return $a['order'] - $b['order'];
 		});
 
-		$output = array();
+		$output = [];
 
 		foreach ($cols as $k => $col) {
 			$output[$k] = $col['label'];
