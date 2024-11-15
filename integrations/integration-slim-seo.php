@@ -11,12 +11,8 @@ class SlimSEOIntegration {
     });
 
     add_filter('slim_seo_post_content', function ($content, $post) {
-      $extractor = new EDContentExtractor([
-        'post' => $post,
-        'blocks' => parse_blocks($content)
-      ]);
-      $extractor->process();
-      return $extractor->getExcerpt();
+      $excerpt = get_the_excerpt($post);
+      return $excerpt;
     }, 10, 2);
   }
 }
