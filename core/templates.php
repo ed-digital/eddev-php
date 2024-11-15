@@ -107,7 +107,6 @@ class EDTemplates {
       $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
       $templateFile = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
 
-
       QueryMonitor::push($templateFile, 'template');
 
       if ($debugQueries) {
