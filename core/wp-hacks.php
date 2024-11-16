@@ -6,6 +6,7 @@ class EDWPHacks {
     self::disable_comments();
     self::disable_emojis();
     self::disable_xml_rpc();
+    self::disable_user_enum();
   }
 
   static function disable_xml_rpc() {
@@ -117,5 +118,18 @@ class EDWPHacks {
     remove_filter('the_content_feed', 'wp_staticize_emoji');
     remove_filter('comment_text_rss', 'wp_staticize_emoji');
     remove_filter('wp_mail', 'wp_staticize_emoji_for_email');
+  }
+
+  static function disable_user_enum() {
+    add_filter('query_vars', function ($public_query_vars) {
+      if (is_admin()) return $public_query_vars;
+      foreach (['author', 'author_name'] as $var) {
+        $key = array_search($var, $public_query_vars);
+        if (false !== $key) {
+          unset($public_query_vars[$key]);
+        }
+      }
+      return $public_query_vars;
+    });
   }
 }

@@ -19,4 +19,5 @@ class SlimSEOIntegration {
     add_filter('slim_seo_linkedin_author', '__return_false');
   }
 }
+
 SlimSEOIntegration::init();

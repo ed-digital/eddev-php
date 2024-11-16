@@ -21,6 +21,7 @@ class EDCore {
   }
 
   private function __construct() {
+    EDCore::$instance = $this;
     $this->themeURL = get_stylesheet_directory_uri();
     $this->themePath = get_stylesheet_directory();
     $this->sitePath = preg_replace("/\/wp-content\/themes\/[^\/]+$/", "", $this->themePath);
@@ -33,9 +34,7 @@ class EDCore {
     }
 
     // Disable GraphQL analysis, which slows down the site
-    add_filter('graphql_should_analyze_queries', function () {
-      return false;
-    });
+    add_filter('graphql_should_analyze_queries', '__return_false');
 
     // Disable limit of number of posts returned by GraphQL
     // This would normally be a security risk, but we don't allow direct GraphQL access.
@@ -53,12 +52,12 @@ class EDCore {
     //   }
     // }
 
+    // Load core files
     $includes = glob(__DIR__ . "/*.php");
     foreach ($includes as $include) {
       include_once($include);
     }
 
-    $this->disableUserEnumeration();
     $this->enableDevUI();
     $this->enableDevReact();
 
@@ -68,13 +67,15 @@ class EDCore {
     remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
     remove_action('wp_body_open', 'wp_global_styles_render_svg_filters');
 
-    add_action('wp_head', [$this, 'injectServerlessEndpoint']);
-    add_action('admin_head', [$this, 'injectServerlessEndpoint']);
+    add_action('wp_head', [$this, 'injectServerlessEndpoint'], 10000);
+    add_action('admin_head', [$this, 'injectServerlessEndpoint'], 10000);
 
     $configFile = $this->themePath . "/backend/config.php";
     if (file_exists($configFile)) {
       include_once($configFile);
     }
+
+    ED\OriginProtection::init();
 
     // Return app data when requested.
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
@@ -104,9 +105,21 @@ class EDCore {
     return isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
   }
 
-  function getConfig() {
+  function getConfig($key = null) {
     if (!$this->config) {
-      $this->config = json_decode(file_get_contents(ED()->themePath . "/ed.config.json"), true) ?? [];
+      $this->config = json_decode(file_get_contents($this->themePath . "/ed.config.json"), true) ?? [];
+    }
+    if ($key) {
+      $parts = explode(".", $key);
+      $config = $this->config;
+      foreach ($parts as $part) {
+        if (isset($config[$part])) {
+          $config = $config[$part];
+        } else {
+          return null;
+        }
+      }
+      return $config;
     }
     return $this->config;
   }
@@ -119,6 +132,16 @@ class EDCore {
       if (isset($config['cache']["*"])) return $config['cache']["*"];
     }
     return [];
+  }
+
+  /**
+   * If origin protection is enabled, this function will check if the request is allowed.
+   * - WordPress users who are logged in
+   * - Using an API key
+   * - Has a valid nonce.
+   */
+  function isAuthorized() {
+    return \ED\OriginProtection::isAuthorized();
   }
 
   function isLocalDev() {
@@ -152,20 +175,6 @@ class EDCore {
       return $fallback;
     }
     return null;
-  }
-
-  function disableUserEnumeration() {
-    if (!is_admin()) {
-      add_filter('query_vars', function ($public_query_vars) {
-        foreach (['author', 'author_name'] as $var) {
-          $key = array_search($var, $public_query_vars);
-          if (false !== $key) {
-            unset($public_query_vars[$key]);
-          }
-        }
-        return $public_query_vars;
-      });
-    }
   }
 
   function enableDevUI() {
@@ -390,7 +399,7 @@ class EDCore {
     }
   }
 
-  private function readEnvValue($key) {
+  function readEnvValue($key) {
     $contents = '';
     $file = $this->themePath . "/.env";
     if (file_exists($file)) {
