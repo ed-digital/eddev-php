@@ -244,6 +244,13 @@ class EDCore {
       EDSiteInfo::init();
     }
 
+    add_action('rest_api_init', function () {
+      register_rest_route('ed/v1', '/handshake', [
+        'methods' => 'GET',
+        'callback' => '__return_true'
+      ]);
+    });
+
     add_action('current_screen', function ($screen) {
       $enabled = $this->screenIsBlockEditor($screen);
       if ($enabled) {
