@@ -81,6 +81,17 @@ class EDCore {
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
       add_action('parse_request', function () {
         header('Content-Type: application/json');
+        $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
+        $bypass = QueryHandler::shouldBypassCache();
+
+        if (!$bypass) {
+          if ((int)$cacheTime) {
+            header('Cache-Control: public, max-age=' . $cacheTime);
+          }
+          header('X-ED-Cache-Duration: ' . (int)$cacheTime);
+          header('X-ED-Generated-At: ' . date("r"));
+          header('X-ED-URI: ' . $_SERVER['REQUEST_URI']);
+        }
         echo json_encode(EDTemplates::getFrontendApp());
         exit;
       });
