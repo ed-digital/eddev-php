@@ -73,19 +73,6 @@ class EDTemplates {
   private static function hookViewResponder() {
     add_filter('template_include', function ($template) {
 
-      // Cache and generation headers, for non-logged-in users
-      $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
-      $bypass = QueryHandler::shouldBypassCache();
-
-      if (!$bypass) {
-        if ((int)$cacheTime) {
-          header('Cache-Control: public, max-age=' . $cacheTime);
-        }
-        header('X-ED-Cache-Duration: ' . (int)$cacheTime);
-        header('X-ED-Generated-At: ' . date("r"));
-        header('X-ED-URI: ' . $_SERVER['REQUEST_URI']);
-      }
-
       // Is this a JSON request? Or a regular page view?
       $isPropsRequest = isset($_GET['_props']) && !!$_GET['_props'];
       $handleAssets = !$isPropsRequest;
@@ -107,19 +94,20 @@ class EDTemplates {
       $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
       $templateFile = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
 
-      QueryMonitor::push($templateFile, 'template');
+      // Cache and generation headers, for non-logged-in users
+      $query = new \ED\GraphQLQuery($templateFile, self::getQueryParams());
 
       if ($debugQueries) {
-        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-          if ($errno === 2) return;
-          QueryMonitor::logError([
-            'type' => 'php',
-            'code' => $errno,
-            'message' => $errstr,
-            'file' => str_replace(ED()->sitePath, "", $errfile),
-            'line' => $errline
-          ]);
-        });
+        // set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+        //   if ($errno === 2) return;
+        //   QueryMonitor::logError([
+        //     'type' => 'php',
+        //     'code' => $errno,
+        //     'message' => $errstr,
+        //     'file' => str_replace(ED()->sitePath, "", $errfile),
+        //     'line' => $errline
+        //   ]);
+        // });
       }
 
       // Load the asset manifest
@@ -132,17 +120,19 @@ class EDTemplates {
         'view' => preg_replace("/(^views\/|\.tsx)/", "", $templateFile),
         'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
       ];
-      $data['viewData'] = self::getDataForTemplate($template);
+
+      // Send cache headers
+      $query->sendCacheHeaders();
+
+      $data['viewData'] = $query->getResult();
       if ($includeAppData) {
-        $data['appData'] = self::getAppQueryData();
+        $appQuery = new ED\GraphQLQuery("views/_app");
+        $data['appData'] = $appQuery->getResult();
       }
+
       if ($isJSX) {
         $data['viewType'] = 'react';
-        // if ($templateFile === "views/_error.tsx") {
-        //   AssetManifest::importChunk("views/page.tsx", "modulepreload");
-        // } else {
         AssetManifest::importChunk($templateFile, "modulepreload");
-        // }
       } else {
         ob_start();
         include($template);
@@ -154,7 +144,7 @@ class EDTemplates {
         ob_end_clean();
       }
 
-      $data['queryMonitor'] = QueryMonitor::pop();
+      $data['queryMonitor'] = QueryMonitor::getResult();
 
       if ($isPropsRequest) {
         header('Content-type: text/json');
@@ -168,12 +158,6 @@ class EDTemplates {
       }
       exit;
     }, 1000, 1);
-  }
-
-  static function appendFileVersion($script) {
-    $file = str_replace(ED()->themeURL, ED()->themePath, $script);
-    $script = str_replace(ED()->themePath, ED()->themeURL, $script) . "?v=" . @filemtime($file);
-    return $script;
   }
 
   static function getMeta() {
@@ -309,77 +293,11 @@ class EDTemplates {
     );
   }
 
-  static function getDataForTemplate($template) {
-    // Determine query params
-    $params = self::getQueryParams();
-
-    // Build up a generic data blob
-    $data = ['data' => null];
-
-    // Does a .graphql file exist?
-    $queryFile = preg_replace("/\.(tsx|jsx|js|ts|php)$/i", ".graphql", $template);
-
-    if (file_exists($queryFile)) {
-      $name = trim(str_replace(ED()->themePath, "", $queryFile), "/");
-      QueryMonitor::push($name, "view");
-      $query = QueryLoader::load($name);
-      $cacheTime = QueryHandler::getCacheTime($name, $query);
-      $result = cached_graphql([
-        "name" => $name,
-        "query" => $query,
-        "variables" => $params
-      ], $cacheTime);
-
-      // Log any errors
-      if (isset($result['errors'])) {
-        foreach ($result['errors'] as $err) {
-          QueryMonitor::logError($err['message']);
-        }
-      }
-      $item = QueryMonitor::pop();
-      if (isset($result['_from_cache'])) {
-        $item->fromCache = true;
-      }
-
-      $data = $result;
-    }
-
-    return $data;
-  }
-
   static function getAppQueryData() {
     $queryFile = "views/_app.graphql";
 
-    $data = null;
-
-    $params = [];
-    $query = QueryLoader::load($queryFile);
-
-    if (is_string($query)) {
-      $cacheTime = QueryHandler::getCacheTime($queryFile, $query);
-      QueryMonitor::push($queryFile, "app");
-      $result = cached_graphql([
-        "name" => $queryFile,
-        "query" => $query,
-        "variables" => $params,
-        "label" => "app"
-      ], $cacheTime);
-
-      // Log any errors
-      if (isset($result['errors'])) {
-        foreach ($result['errors'] as $err) {
-          QueryMonitor::logError($err['message']);
-        }
-      }
-
-      $item = QueryMonitor::pop();
-      if (isset($result['_from_cache'])) {
-        $item->fromCache = true;
-      }
-      $data = $result;
-    }
-
-    return $data;
+    $query = new ED\GraphQLQuery($queryFile);
+    return $query->getResult();
   }
 
   static function getFrontendApp() {

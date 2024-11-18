@@ -27,7 +27,10 @@ class EDCore {
     $this->sitePath = preg_replace("/\/wp-content\/themes\/[^\/]+$/", "", $this->themePath);
     $this->selfPath = dirname(__DIR__);
     $this->siteURL = get_site_url();
-    $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url());
+
+    if ((bool)$this->readEnvValue("DEBUG_FULL_SECURITY") === false) {
+      $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url());
+    }
 
     if (!defined('WPGRAPHQL_PLUGIN_URL')) {
       define('WPGRAPHQL_PLUGIN_URL', $this->themeURL . '/vendor/wp-graphql/wp-graphql/');
@@ -81,18 +84,16 @@ class EDCore {
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
       add_action('parse_request', function () {
         header('Content-Type: application/json');
-        $cacheTime = @ED()->getCacheConfig()['props'] ?? 0;
-        $bypass = QueryHandler::shouldBypassCache();
-
-        if (!$bypass) {
-          if ((int)$cacheTime) {
-            header('Cache-Control: public, max-age=' . $cacheTime);
-          }
-          header('X-ED-Cache-Duration: ' . (int)$cacheTime);
-          header('X-ED-Generated-At: ' . date("r"));
-          header('X-ED-URI: ' . $_SERVER['REQUEST_URI']);
-        }
-        echo json_encode(EDTemplates::getFrontendApp());
+        $query = new \ED\GraphQLQuery("views/_app", []);
+        $query->setDecorator("withTrackers", function ($data) {
+          return [
+            "appData" => $data,
+            "trackers" => EDTrackers::collectAll()
+          ];
+        });
+        $result = $query->getResult();
+        $query->sendCacheHeaders();
+        echo json_encode($result);
         exit;
       });
     }
@@ -135,14 +136,38 @@ class EDCore {
     return $this->config;
   }
 
-  function getCacheConfig() {
-    $config = $this->getConfig();
+  function matchHost($pattern) {
     $hostname = preg_replace("/:[0-9]+/", "", $_SERVER['HTTP_HOST']);
-    if (isset($config['cache'])) {
-      if (isset($config['cache'][$hostname])) return $config['cache'][$hostname];
-      if (isset($config['cache']["*"])) return $config['cache']["*"];
+    if (function_exists('fnmatch')) {
+      return fnmatch($pattern, $hostname);
+    } else {
+      return $pattern === $hostname;
     }
-    return [];
+  }
+
+  function getCacheConfig($key = null) {
+    $config = $this->getConfig();
+    $value = null;
+    if (isset($config['cache'])) {
+      foreach ($config['cache'] as $host => $cacheConfig) {
+        if ($this->matchHost($host)) {
+          $value = $cacheConfig;
+          break;
+        }
+      }
+    }
+    if ($key) {
+      $parts = explode(".", $key);
+      foreach ($parts as $part) {
+        if (isset($value[$part])) {
+          $value = $value[$part];
+        } else {
+          return null;
+        }
+      }
+      return $value;
+    }
+    return null;
   }
 
   /**

@@ -88,6 +88,7 @@ class EDWPHacks {
     add_action('wp_before_admin_bar_render', function () {
       global $wp_admin_bar;
       $wp_admin_bar->remove_menu('comments');
+      $wp_admin_bar->remove_menu('customize');
     });
 
     // Return a comment count of zero to hide existing comment entry link.

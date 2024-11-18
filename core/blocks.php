@@ -445,45 +445,23 @@ class BlockQL extends Config {
   }
 
   public static function runBlockQuery($meta, $attributes, $postID) {
-    $cacheKey = null;
-    $queryFile = "blocks/" . $meta['id'] . ".graphql";
-    $contents = QueryLoader::load($queryFile);
-    if (!$contents) return;
+    // Load the query
+    $query = new \ED\GraphQLQuery("blocks/" . $meta['id'], EDTemplates::getQueryParams());
 
-    // If caching is support by this block (via Supports memo, then calculate the cache key and look for a stored value)
-    if (isset($meta['canCache']) && $meta['canCache']) {
-      $cacheKey = md5($contents . "_" . $attributes['name'] . "_" . json_encode($attributes['data']) . "_" . json_encode($attributes['inline']));
-    }
-    if ($cacheKey) {
-      $cached = get_transient($cacheKey);
-      if ($cached) {
-        QueryMonitor::push($queryFile, "block (cached)");
-        QueryMonitor::pop();
-        return $cached;
+    if (!$query->exists()) return null;
+
+    $willExecute = $query->prepare();
+    if ($willExecute) {
+      if (!isset($attributes['id'])) {
+        $attributes['id'] = "block_" . acf_get_block_id($attributes, [], isset($meta['use_post_meta']));
+      }
+      BlockQLRoot::setContext($attributes);
+      if (isset($meta['use_post_meta'])) {
+        acf_add_block_meta_values($attributes, $postID);
       }
     }
 
-    QueryMonitor::push($queryFile, "block");
-    $params = EDTemplates::getQueryParams();
-    if (!isset($attributes['id'])) {
-      $attributes['id'] = "block_" . acf_get_block_id($attributes, [], isset($meta['use_post_meta']));
-    }
-    BlockQLRoot::setContext($attributes);
-    if (isset($meta['use_post_meta'])) {
-      acf_add_block_meta_values($attributes, $postID);
-    }
-    $result = graphql([
-      'query' => $contents,
-      'variables' => $params
-    ]);
-
-    if (isset($result['errors']) && count($result['errors'])) {
-      foreach ($result['errors'] as $err) {
-        QueryMonitor::logError($err['message']);
-      }
-      QueryMonitor::pop();
-      return ["errors" => $result['errors']];
-    }
+    $result = $query->getResult();
 
     // Extract result data into props
     $props = [];
@@ -499,11 +477,6 @@ class BlockQL extends Config {
       } else {
         $props[$key] = $value;
       }
-    }
-    QueryMonitor::pop();
-
-    if ($cacheKey) {
-      set_transient($cacheKey, $props, 60 * 60 * 24);
     }
 
     return $props;
