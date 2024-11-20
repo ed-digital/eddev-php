@@ -234,7 +234,7 @@ class EDTemplates {
       // Ignore wp-includes scripts and styles
       if (($tag->tagName === 'link' && @$tag->attributes['rel'] !== 'icon') || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$tag->attributes["href"])) {
         $ignore = true;
-      } else if ($tag->tagName === 'script' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$tag->attributes["src"])) {
+      } else if ($tag->tagName === 'script' && @preg_match("/(wp-content|wp-includes|wp-json|xmlrpc)/", @$tag->attributes["src"])) {
         $ignore = true;
       } else if ($tag->tagName === 'meta') {
         if (@$tag->attributes['name'] === "generator") {
