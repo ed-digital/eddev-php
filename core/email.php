@@ -93,7 +93,6 @@ class EDEmailMessage {
       }
 
       if ($debug) {
-        dump($toAddress, $subject);
         echo $message;
       } else {
         wp_mail($toAddress, $subject, $message, $headers);

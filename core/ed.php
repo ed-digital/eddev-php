@@ -80,24 +80,6 @@ class EDCore {
 
     ED\OriginProtection::init();
 
-    // Return app data when requested.
-    if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
-      add_action('parse_request', function () {
-        header('Content-Type: application/json');
-        $query = new \ED\GraphQLQuery("views/_app", []);
-        $query->setDecorator("withTrackers", function ($data) {
-          return [
-            "appData" => $data,
-            "trackers" => EDTrackers::collectAll()
-          ];
-        });
-        $result = $query->getResult();
-        $query->sendCacheHeaders();
-        echo json_encode($result);
-        exit;
-      });
-    }
-
     include_once(__DIR__ . "/../integrations/load-integrations.php");
     ed_detect_integrations();
   }
@@ -244,6 +226,24 @@ class EDCore {
   function init() {
     // Include backend folder
     $this->includeBackendFiles();
+
+    // Return app data when requested.
+    if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
+      add_action('parse_request', function () {
+        header('Content-Type: application/json');
+        $query = new \ED\GraphQLQuery("views/_app", []);
+        $query->setDecorator("withTrackers", function ($data) {
+          return [
+            "appData" => $data,
+            "trackers" => EDTrackers::collectAll()
+          ];
+        });
+        $result = $query->getResult();
+        $query->sendCacheHeaders();
+        echo json_encode($result);
+        exit;
+      });
+    }
 
     add_filter('plugins_url', function ($url, $path, $plugin) {
       if (strpos($url, "wp-graphql/wp-graphql-acf/src") > 0) {

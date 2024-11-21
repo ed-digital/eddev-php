@@ -173,8 +173,15 @@ class EDTemplates {
     $foot = ob_get_contents();
     ob_end_clean();
 
+    // Grab the body contents
+    ob_start();
+    wp_body_open();
+    $body = ob_get_contents();
+    ob_end_clean();
+
     return [
       'head' => self::parseHeaderHTML($head),
+      'body' => self::parseHeaderHTML($body),
       'footer' => self::parseHeaderHTML($foot)
     ];
   }
@@ -232,15 +239,15 @@ class EDTemplates {
       }
 
       // Ignore wp-includes scripts and styles
-      if (($tag->tagName === 'link' && @$tag->attributes['rel'] !== 'icon') || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$tag->attributes["href"])) {
-        $ignore = true;
-      } else if ($tag->tagName === 'script' && @preg_match("/(wp-content|wp-includes|wp-json|xmlrpc)/", @$tag->attributes["src"])) {
-        $ignore = true;
-      } else if ($tag->tagName === 'meta') {
-        if (@$tag->attributes['name'] === "generator") {
-          $ignore = true;
-        }
-      }
+      // if (($tag->tagName === 'link' && @$tag->attributes['rel'] !== 'icon') || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$tag->attributes["href"])) {
+      //   $ignore = true;
+      // } else if ($tag->tagName === 'script' || @preg_match("/(wp-includes|wp-json|xmlrpc)/", @$tag->attributes["src"])) {
+      //   $ignore = true;
+      // } else if ($tag->tagName === 'meta') {
+      //   if (@$tag->attributes['name'] === "generator") {
+      //     $ignore = true;
+      //   }
+      // }
 
       // Give user code the chance to ignore/unignore tags
       $tag->ignore = $ignore;
@@ -303,7 +310,7 @@ class EDTemplates {
   static function getFrontendApp() {
     return [
       'appData' => self::getAppQueryData(),
-      'trackers' => EDTrackers::collectAll(),
+      'trackers' => EDTrackers::collectAll()
     ];
   }
 }

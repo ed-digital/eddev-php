@@ -6,9 +6,11 @@ class EDTrackers {
   protected static $trackers = [];
 
   public static function init() {
-    add_action('wp_head', [__CLASS__, 'emitHead']);
-    add_action('wp_body_open', [__CLASS__, 'emitBody']);
-    add_action('wp_footer', [__CLASS__, 'emitFooter']);
+    if (!isset($_GET['_props'])) {
+      add_action('wp_head', [__CLASS__, 'emitHead']);
+      add_action('wp_body_open', [__CLASS__, 'emitBody']);
+      add_action('wp_footer', [__CLASS__, 'emitFooter']);
+    }
   }
 
   public static function loadTrackers() {
@@ -118,7 +120,7 @@ class EDTrackers {
       do_action('ed_print_trackers_' . $location);
       $contents = ob_get_contents();
       ob_end_clean();
-      $result[$location] = EDTemplates::extractTags($contents);
+      $result[$location] = $contents;
     }
 
     return $result;
