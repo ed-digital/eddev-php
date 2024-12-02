@@ -598,7 +598,12 @@ class BlockQL extends Config {
       // Handle frontendMode property
       if ($meta && isset($meta['frontendMode'])) {
         if ($meta['frontendMode'] === 'hidden') {
-          continue;
+          if ($args['flattenExcluded']) {
+            $childrenOnly = true;
+            $included = false;
+          } else {
+            continue;
+          }
         } else if ($meta['frontendMode'] === 'childrenOnly') {
           $childrenOnly = true;
           $included = false;
