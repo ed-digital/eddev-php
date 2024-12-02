@@ -23,21 +23,21 @@ class SlimSEOIntegration {
 
     add_action('ed_print_trackers_head', function () {
       $result = get_option('slim_seo');
-      if ($result['header_code']) {
+      if (isset($result['header_code'])) {
         echo $result['header_code'];
       }
     });
 
     add_action('ed_print_trackers_body', function () {
       $result = get_option('slim_seo');
-      if ($result['body_code']) {
+      if (isset($result['body_code'])) {
         echo $result['body_code'];
       }
     });
 
     add_action('ed_print_trackers_footer', function () {
       $result = get_option('slim_seo');
-      if ($result['footer_code']) {
+      if (isset($result['footer_code'])) {
         echo $result['footer_code'];
       }
     });
