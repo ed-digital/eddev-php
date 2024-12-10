@@ -260,3 +260,11 @@ if (class_exists("acf_field")) {
     }
   }
 }
+
+/**
+ * Hides the notice about WPGraphQL ACF v2 being available
+ */
+if (!class_exists('WPGraphQLAcf')) {
+  class WPGraphQLAcf {
+  }
+}

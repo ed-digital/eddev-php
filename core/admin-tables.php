@@ -12,6 +12,7 @@ class EDAdminTables {
 		add_action('manage_' . $postType . '_posts_custom_column', [$this, 'printColumn'], 16);
 		add_filter('manage_edit-' . $postType . '_sortable_columns', [$this, 'sortableColumns']);
 		add_filter('pre_get_posts', [$this, 'applySorting']);
+		add_filter('edit_' . $postType . '_per_page', [$this, 'filterPerPage'], 10, 1);
 	}
 
 	static function init() {
@@ -25,6 +26,21 @@ class EDAdminTables {
 			$object = get_post_type_object($name);
 			$manager = new EDAdminTables($name, $object->adminColumns ?? $object->admin_columns ?? []);
 		}
+	}
+
+	/**
+	 * Override the default number of items per page in the admin
+	 */
+	public function filterPerPage($value) {
+		// Only apply an updated value if the value is 20, which is WordPress' default
+		// This allows the user to customize in page settings
+		if ($value === 20) {
+			$postTypeObject = get_post_type_object($this->postType);
+			if (isset($postTypeObject->adminPerPage)) {
+				return $postTypeObject->adminPerPage;
+			}
+		}
+		return $value;
 	}
 
 	public function alterColumnLayout($original) {

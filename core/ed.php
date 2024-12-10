@@ -525,8 +525,8 @@ class EDCore {
   function registerMeta(string $object_type, string $meta_key, array $args, string|array $deprecated = null): bool {
     // Normalize some of the args
     $single = @$args['single'] === false ? false : true;
+    $showInRest = @$args['show_in_rest'] === false ? false : true;
     $args['single'] = $single;
-    $showInRest = @$args['show_in_rest'] ?? true;
     $args['show_in_rest'] = $showInRest;
 
     /**
