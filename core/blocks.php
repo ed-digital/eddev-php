@@ -269,36 +269,42 @@ class BlockQL extends Config {
       }
     ]);
 
-    register_graphql_field('ContentNode', 'contentBlocks', [
-      'type' => ['non_null' => 'ContentBlocks'],
-      'description' => "The current Gutenberg block in context.",
-      'args' => [
-        'include' => [
-          'type' => ['list_of' => ['non_null' => 'String']],
-          'description' => 'Include only the matching blocks. You can specify a list of block names or tags, use flags as "key=value" pairs. Block names can use wildcards, like "blog/*".'
-        ],
-        'exclude' => [
-          'type' => ['list_of' => ['non_null' => 'String']],
-          'description' => 'Exclude only the matching blocks. You can specify a list of block names or tags, use flags as "key=value" pairs. Block names can use wildcards, like "blog/*".'
-        ],
-        'flattenExcluded' => [
-          'type' => 'Boolean',
-          'description' => 'When a block is excluded by a filter, replace it with its inner blocks.'
-        ],
-        'maxDepth' => [
-          'type' => 'Int',
-          'description' => 'Maximum inner blocks depth to include.'
-        ],
-        'limit' => [
-          'type' => 'Int',
-          'description' => 'Limit the number of top-level blocks returned'
+    register_graphql_interface_type('WithContentBlocks', [
+      'fields' => [
+        'contentBlocks' => [
+          'type' => ['non_null' => 'ContentBlocks'],
+          'description' => "The current Gutenberg block in context.",
+          'args' => [
+            'include' => [
+              'type' => ['list_of' => ['non_null' => 'String']],
+              'description' => 'Include only the matching blocks. You can specify a list of block names or tags, use flags as "key=value" pairs. Block names can use wildcards, like "blog/*".'
+            ],
+            'exclude' => [
+              'type' => ['list_of' => ['non_null' => 'String']],
+              'description' => 'Exclude only the matching blocks. You can specify a list of block names or tags, use flags as "key=value" pairs. Block names can use wildcards, like "blog/*".'
+            ],
+            'flattenExcluded' => [
+              'type' => 'Boolean',
+              'description' => 'When a block is excluded by a filter, replace it with its inner blocks.'
+            ],
+            'maxDepth' => [
+              'type' => 'Int',
+              'description' => 'Maximum inner blocks depth to include.'
+            ],
+            'limit' => [
+              'type' => 'Int',
+              'description' => 'Limit the number of top-level blocks returned'
+            ]
+          ],
+          'resolve' => function ($root, $args, $context, $info) {
+            $post = get_post($root->ID);
+            return $this->processBlocks(parse_blocks($post->post_content), $root->ID, $args);
+          }
         ]
-      ],
-      'resolve' => function ($root, $args, $context, $info) {
-        $post = get_post($root->ID);
-        return $this->processBlocks(parse_blocks($post->post_content), $root->ID, $args);
-      }
+      ]
     ]);
+
+    register_graphql_interfaces_to_types(['WithContentBlocks'], ['ContentNode']);
 
     add_filter('graphql_acf_get_root_id', function ($id, $root) {
       if ($root instanceof BlockQLRoot) {

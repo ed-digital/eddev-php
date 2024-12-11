@@ -26,6 +26,11 @@ class AssetManifest {
     }
   }
 
+  static function assetModifiedTime($url) {
+    $path = str_replace(ED()->themeURL, ED()->themePath, $url);
+    return filemtime($path);
+  }
+
   static function importChunk($asset, $rel = "main") {
     if (self::$ignore) return;
     if (isset(self::$imported[$asset])) return;
@@ -74,6 +79,23 @@ class AssetManifest {
         $output[] = '<link rel="stylesheet" type="text/css" media="all" href="' . $asset['file'] . '">';
       } else {
         $output[] = '<link rel="preload" crossOrigin="anonymous" href="' . $asset['file'] . '" ' . ($asset['type'] ? 'as="' . $asset['type'] . '"' : '') . '/>';
+      }
+    }
+
+    return "\n" . implode("\n", $output) . "\n";
+  }
+
+  static function enqueue($scriptDeps = []) {
+    if (self::$ignore) return '';
+    $output = [];
+
+    $assets = self::$assets;
+
+    foreach ($assets as $asset) {
+      if ($asset['type'] == 'style') {
+        wp_enqueue_style(str_replace(ED()->themeURL, '', $asset['file']), $asset['file'], [], self::assetModifiedTime($asset['file']));
+      } else if ($asset['type'] == 'script') {
+        wp_enqueue_script(str_replace(ED()->themeURL, '', $asset['file']), $asset['file'], $scriptDeps, self::assetModifiedTime($asset['file']));
       }
     }
 

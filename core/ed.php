@@ -1,5 +1,7 @@
 <?php
 
+use ED\TemplateParts;
+
 class EDCore {
   static $instance;
 
@@ -312,8 +314,8 @@ class EDCore {
   }
 
   function enqueueAdminScripts() {
-    if ($this->enqueuedAdmin) return;
-    $this->enqueuedAdmin = true;
+    // if ($this->enqueuedAdmin) return;
+    // $this->enqueuedAdmin = true;
     // The dependencies to enqueue, depending on whether the block editor is on this page
     $deps = $this->screenIsBlockEditor(get_current_screen())
       ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf']
@@ -324,6 +326,17 @@ class EDCore {
       foreach ($deps as $dep) {
         wp_enqueue_script($dep);
       }
+
+      add_action('wp_print_scripts', function () {
+        // Add Vite HMR info
+        echo "<script id='vite-iframe-header'></script>";
+        // echo "<template id='eddev-admin-iframe-head'>\n<!---VITE_HEADER--->\n</template>";
+      });
+
+      add_action('wp_print_footer_scripts', function () {
+        echo "<script id='vite-test'></script><script id='vite-iframe-footer'></script>";
+        // echo "<template id='eddev-admin-iframe-footer'>\n<!---VITE_HEADER--->\n</template>";
+      });
     } else {
       AssetManifest::setup(false, "cms");
       AssetManifest::importChunk(".eddev/dev-spa/entry.admin.tsx", 'main');
@@ -332,17 +345,9 @@ class EDCore {
         AssetManifest::importChunk(".eddev/prod-spa/entry.admin.tsx", 'main');
         $adminEntry = AssetManifest::getEntryScript();
       }
-      $adminEntryPath = str_replace(ED()->themeURL, ED()->themePath, $adminEntry);
+      AssetManifest::importChunk("style.css");
 
-      if (file_exists($adminEntryPath)) {
-        $screen = @get_current_screen();
-        wp_enqueue_script(
-          'theme_admin_js',
-          $adminEntry,
-          ($screen && @$screen->is_block_editor()) ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
-          filemtime($adminEntryPath)
-        );
-      }
+      AssetManifest::enqueue($deps);
     }
   }
 
@@ -351,19 +356,17 @@ class EDCore {
       add_action('admin_head', function () {
         // Add Vite HMR info
         echo "<!---VITE_HEADER--->";
-        echo "<template id='eddev-admin-iframe-head'><!---VITE_HEADER---></template>";
       });
 
       add_action('admin_footer', function () {
         echo "<!---VITE_FOOTER--->";
-        echo "<template id='eddev-admin-iframe-footer'><!---VITE_HEADER---></template>";
       });
     }
 
     add_filter('block_editor_settings_all', function ($editor_settings, $context) {
       if (ED()->isDevProxy()) {
       } else {
-        $editor_settings['__unstableResolvedAssets']['scripts'] .= '\n<script type="module" src="' . "https://agda.local/wp-content/themes/agda/dist/cms/main.admin.js?ver=1729034669" . '"></script>';
+        // $editor_settings['__unstableResolvedAssets']['scripts'] .= '\n<script type="module" src="' . "https://agda.local/wp-content/themes/agda/dist/cms/main.admin.js?ver=1729034669" . '"></script>';
       }
       return $editor_settings;
     }, 10, 2);
@@ -373,6 +376,10 @@ class EDCore {
     });
 
     add_filter('enqueue_block_editor_assets', function () {
+      self::enqueueAdminScripts();
+    });
+
+    add_action('enqueue_block_assets', function () {
       self::enqueueAdminScripts();
     });
 
@@ -493,6 +500,10 @@ class EDCore {
     if (@file_get_contents($file) !== $contents) {
       file_put_contents($file, $contents);
     }
+  }
+
+  function registerTemplatePart($args) {
+    return \ED\TemplateParts::registerTemplatePart($args);
   }
 
   function registerPostType($name, $args) {
