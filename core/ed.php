@@ -329,12 +329,12 @@ class EDCore {
 
       add_action('wp_print_scripts', function () {
         // Add Vite HMR info
-        echo "<script id='vite-iframe-header'></script>";
+        echo "<script id='vite-test-header'></script><script id='vite-iframe-header'></script>";
         // echo "<template id='eddev-admin-iframe-head'>\n<!---VITE_HEADER--->\n</template>";
       });
 
       add_action('wp_print_footer_scripts', function () {
-        echo "<script id='vite-test'></script><script id='vite-iframe-footer'></script>";
+        echo "<script id='vite-test-footer'></script><script id='vite-iframe-footer'></script>";
         // echo "<template id='eddev-admin-iframe-footer'>\n<!---VITE_HEADER--->\n</template>";
       });
     } else {
@@ -360,6 +360,11 @@ class EDCore {
 
       add_action('admin_footer', function () {
         echo "<!---VITE_FOOTER--->";
+      });
+
+      add_action('wp_print_scripts', function () {
+        $data = EDTemplates::getAppQueryData();
+        echo "<script>window.__ED_APP_DATA = " . json_encode($data) . "</script>";
       });
     }
 
@@ -389,13 +394,6 @@ class EDCore {
       }
       return $tag;
     }, 10, 3);
-
-    add_action('enqueue_block_editor_assets', function () {
-      add_action('admin_print_scripts', function () {
-        $data = EDTemplates::getAppQueryData();
-        echo "<script>window.__ED_APP_DATA = " . json_encode($data) . "</script>";
-      });
-    });
   }
 
   function tagCoreBlocks($tag, $blocks) {
