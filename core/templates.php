@@ -1,5 +1,7 @@
 <?php
 
+use ED\AssetManifest;
+
 class EDTemplates {
 
   static $templates;

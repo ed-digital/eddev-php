@@ -1,5 +1,7 @@
 <?php
 
+namespace ED;
+
 class AssetManifest {
   static $manifest;
   static $ignore = false;
@@ -86,20 +88,16 @@ class AssetManifest {
   }
 
   static function enqueue($scriptDeps = []) {
-    if (self::$ignore) return '';
-    $output = [];
-
     $assets = self::$assets;
 
     foreach ($assets as $asset) {
+      // ed_dump("Enqueue", $asset);
       if ($asset['type'] == 'style') {
         wp_enqueue_style(str_replace(ED()->themeURL, '', $asset['file']), $asset['file'], [], self::assetModifiedTime($asset['file']));
       } else if ($asset['type'] == 'script') {
         wp_enqueue_script(str_replace(ED()->themeURL, '', $asset['file']), $asset['file'], $scriptDeps, self::assetModifiedTime($asset['file']));
       }
     }
-
-    return "\n" . implode("\n", $output) . "\n";
   }
 
   static function collectMainTag() {

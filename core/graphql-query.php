@@ -53,7 +53,7 @@ class GraphQLQuery {
     if ($mustExecute) {
       // Execute
       $result = $this->executeQuery();
-      $result['_generated'] = date('r');
+      $result['__originGenerated'] = date('r');
 
       // Save to cache
       if ($this->cache) {
@@ -91,11 +91,6 @@ class GraphQLQuery {
         'query' => $this->queryText,
         'variables' => $this->variables
       ]);
-      if (isset($result['errors'])) {
-        foreach ($result['errors'] as $err) {
-          \QueryMonitor::logError($err['message']);
-        }
-      }
       $this->monitorEntry = \QueryMonitor::pop();
     }
 
@@ -157,6 +152,8 @@ class GraphQLQuery {
         return "app";
       }
       return "page";
+    } else if (strpos($name, "blocks/") === 0) {
+      return "block";
     }
     return null;
   }
@@ -211,14 +208,6 @@ class FragmentLoader {
 
   static $cache;
 
-  static function setup() {
-    add_filter('graphiql_external_fragments', [__CLASS__, '_graphiql_external_fragments']);
-  }
-
-  static function _graphiql_external_fragments($fragments) {
-    return array_merge($fragments, FragmentLoader::getOptimized());
-  }
-
   static function getAll() {
     if (self::$cache) return self::$cache;
     $fragments = array_merge(
@@ -241,5 +230,3 @@ class FragmentLoader {
     }
   }
 }
-
-FragmentLoader::setup();

@@ -64,7 +64,6 @@ class EDCore {
     }
 
     $this->enableDevUI();
-    $this->enableDevReact();
 
     EDWPHacks::apply();
 
@@ -81,6 +80,7 @@ class EDCore {
     }
 
     ED\OriginProtection::init();
+    ED\AdminAssets::init();
 
     include_once(__DIR__ . "/../integrations/load-integrations.php");
     ed_detect_integrations();
@@ -205,26 +205,6 @@ class EDCore {
     });
   }
 
-  function enableDevReact() {
-    add_filter("script_loader_src", function ($src, $handle) {
-      if (($handle === "react-dom" || $handle === "react")) {
-        if (preg_match("/plugins\/gutenberg\/vendor\/react/", $src)) {
-          // Pre-Gutenberg 12.9.0
-          $files = scandir(ED()->sitePath . "/wp-content/plugins/gutenberg/vendor");
-          foreach ($files as $file) {
-            if (strpos($file, $handle . ".") === 0 && strpos($file, "min") === false) {
-              return ED()->siteURL . "/wp-content/plugins/gutenberg/vendor/" . $file;
-            }
-          }
-        } else {
-          // Gutenberg 13.0+
-          return preg_replace("/\.min\./", ".", $src);
-        }
-      }
-      return $src;
-    }, 2, 2);
-  }
-
   function init() {
     // Include backend folder
     $this->includeBackendFiles();
@@ -278,15 +258,21 @@ class EDCore {
       ]);
     });
 
-    add_action('current_screen', function ($screen) {
-      $enabled = $this->screenIsBlockEditor($screen);
-      if ($enabled) {
-        $this->adminScripts();
-      }
+    add_action('enqueue_graphiql_extension', function () {
+      /** Reconfigure WPGraphQL IDE to include preloaded fragments, and a compatible GraphQL endpoint */
+      wp_localize_script(
+        'wp-graphiql',
+        'wpGraphiQLSettings',
+        [
+          'nonce'             => wp_create_nonce('wp_rest'),
+          'graphqlEndpoint'   => graphql_get_endpoint_url(),
+          'avatarUrl'         => 0 !== get_current_user_id() ? get_avatar_url(get_current_user_id()) : null,
+          'externalFragments' => apply_filters('graphiql_external_fragments', \ED\FragmentLoader::getOptimized()),
+        ]
+      );
     });
 
     // if (ED()->isDevProxy() && preg_match("/post(-new)?\.php/", $_SERVER['REQUEST_URI'])) {
-
 
     //   // add_filter('script_loader_tag', function($tag, $handle, $src) {
     //   //   if ($handle === 'react') {
@@ -302,98 +288,6 @@ class EDCore {
     //   //   return $tag;
     //   // }, 10, 3);
     // }
-  }
-
-  private function screenIsBlockEditor($screen) {
-    try {
-      return @$screen->is_block_editor === true || @$screen->base === "site-editor" || @$screen->is_block_editor();
-    } catch (Error $err) {
-    } catch (Exception $err) {
-    }
-    return false;
-  }
-
-  function enqueueAdminScripts() {
-    // if ($this->enqueuedAdmin) return;
-    // $this->enqueuedAdmin = true;
-    // The dependencies to enqueue, depending on whether the block editor is on this page
-    $deps = $this->screenIsBlockEditor(get_current_screen())
-      ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf']
-      : ['acf', 'react', 'react-dom', 'wp-hooks'];
-
-    if (ED()->isDevProxy()) {
-      // If the dev proxy is currently being used, just enqueue the deps
-      foreach ($deps as $dep) {
-        wp_enqueue_script($dep);
-      }
-
-      add_action('wp_print_scripts', function () {
-        // Add Vite HMR info
-        echo "<script id='vite-test-header'></script><script id='vite-iframe-header'></script>";
-        // echo "<template id='eddev-admin-iframe-head'>\n<!---VITE_HEADER--->\n</template>";
-      });
-
-      add_action('wp_print_footer_scripts', function () {
-        echo "<script id='vite-test-footer'></script><script id='vite-iframe-footer'></script>";
-        // echo "<template id='eddev-admin-iframe-footer'>\n<!---VITE_HEADER--->\n</template>";
-      });
-    } else {
-      AssetManifest::setup(false, "cms");
-      AssetManifest::importChunk(".eddev/dev-spa/entry.admin.tsx", 'main');
-      $adminEntry = AssetManifest::getEntryScript();
-      if (!$adminEntry) {
-        AssetManifest::importChunk(".eddev/prod-spa/entry.admin.tsx", 'main');
-        $adminEntry = AssetManifest::getEntryScript();
-      }
-      AssetManifest::importChunk("style.css");
-
-      AssetManifest::enqueue($deps);
-    }
-  }
-
-  function adminScripts() {
-    if (ED()->isDevProxy()) {
-      add_action('admin_head', function () {
-        // Add Vite HMR info
-        echo "<!---VITE_HEADER--->";
-      });
-
-      add_action('admin_footer', function () {
-        echo "<!---VITE_FOOTER--->";
-      });
-
-      add_action('wp_print_scripts', function () {
-        $data = EDTemplates::getAppQueryData();
-        echo "<script>window.__ED_APP_DATA = " . json_encode($data) . "</script>";
-      });
-    }
-
-    add_filter('block_editor_settings_all', function ($editor_settings, $context) {
-      if (ED()->isDevProxy()) {
-      } else {
-        // $editor_settings['__unstableResolvedAssets']['scripts'] .= '\n<script type="module" src="' . "https://agda.local/wp-content/themes/agda/dist/cms/main.admin.js?ver=1729034669" . '"></script>';
-      }
-      return $editor_settings;
-    }, 10, 2);
-
-    add_filter('admin_enqueue_scripts', function () {
-      self::enqueueAdminScripts();
-    });
-
-    add_filter('enqueue_block_editor_assets', function () {
-      self::enqueueAdminScripts();
-    });
-
-    add_action('enqueue_block_assets', function () {
-      self::enqueueAdminScripts();
-    });
-
-    add_filter('script_loader_tag', function ($tag, $handle, $src) {
-      if ($handle === "theme_admin_js") {
-        return '<script type="module" src="' . $src . '"></script>';
-      }
-      return $tag;
-    }, 10, 3);
   }
 
   function tagCoreBlocks($tag, $blocks) {
@@ -501,7 +395,7 @@ class EDCore {
   }
 
   function registerTemplatePart($args) {
-    return \ED\TemplateParts::registerTemplatePart($args);
+    return TemplateParts::registerTemplatePart($args);
   }
 
   function registerPostType($name, $args) {

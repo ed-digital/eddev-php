@@ -1,5 +1,6 @@
 <?php
 
+use ED\AssetManifest;
 use WPGraphQL\Registry\TypeRegistry;
 use WPGraphQL\ACF\Config;
 

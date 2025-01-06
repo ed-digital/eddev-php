@@ -1,7 +1,5 @@
 <?php
 
-use WPGraphQL\Utils\QueryLog;
-
 class QueryHandler {
 
   static function setup() {
@@ -53,6 +51,7 @@ class QueryHandler {
 
     // Execute the query
     $result = $query->getResult();
+    $result['queryMonitor'] = QueryMonitor::getResult();
 
     // Send any required headers
     $query->sendCacheHeaders();
@@ -86,7 +85,7 @@ class QueryHandler {
   }
 
   static function getQueryName($name) {
-    return "queries/" . preg_replace("/\.+/", ".", $name);
+    return "queries/" . preg_replace("/^\//", "", preg_replace("/\.+/", ".", $name));
   }
 
   static function sendGraphQLHeaders() {
