@@ -7,30 +7,42 @@ use EDTemplates;
 class AdminAssets {
 
   static $isBlockEditor = false;
+  static $enabled = false;
 
   static function init() {
     add_action('current_screen', function ($screen) {
-      self::$isBlockEditor = true; //self::screenIsBlockEditor($screen);
+      self::$isBlockEditor = self::screenIsBlockEditor($screen);
+      if (self::$isBlockEditor) {
+        self::$enabled = true;
+      }
     });
 
     if (is_admin()) {
       add_action('enqueue_block_assets', function () {
-        self::enqueueAdminScripts();
+        if (self::$enabled) {
+          self::enqueueAdminScripts();
+        }
       });
 
       add_action('enqueue_block_editor_assets', function () {
-        self::enqueueAdminScripts();
+        if (self::$enabled) {
+          self::enqueueAdminScripts();
+        }
       });
     }
 
     if (ED()->isDevProxy()) {
       add_action('admin_head', function () {
-        // Add Vite HMR info
-        echo "<!---VITE_HEADER--->";
+        if (self::$enabled) {
+          // Add Vite HMR info
+          echo "<!---VITE_HEADER--->";
+        }
       });
 
       add_action('admin_footer', function () {
-        echo "<!---VITE_FOOTER--->";
+        if (self::$enabled) {
+          echo "<!---VITE_FOOTER--->";
+        }
       });
     }
 

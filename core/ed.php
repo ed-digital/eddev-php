@@ -16,8 +16,6 @@ class EDCore {
 
   public $views = [];
 
-  private $enqueuedAdmin = false;
-
   static function boot() {
     EDCore::$instance = new EDCore();
   }
