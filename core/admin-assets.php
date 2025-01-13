@@ -19,15 +19,13 @@ class AdminAssets {
 
     if (is_admin()) {
       add_action('enqueue_block_assets', function () {
-        if (self::$enabled) {
-          self::enqueueAdminScripts();
-        }
+        self::$enabled = true;
+        self::enqueueAdminScripts();
       });
 
       add_action('enqueue_block_editor_assets', function () {
-        if (self::$enabled) {
-          self::enqueueAdminScripts();
-        }
+        self::$enabled = true;
+        self::enqueueAdminScripts();
       });
     }
 
