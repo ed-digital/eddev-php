@@ -87,8 +87,10 @@ class EDContentExtractor {
     if ($this->useInlineText) {
       if (isset($block['attrs']) && isset($block['attrs']['inline']) && is_array($block['attrs']['inline'])) {
         foreach ($block['attrs']['inline'] as $value) {
-          if ($value) {
+          if (is_string($value)) {
             $this->addText($value);
+          } else {
+            // TDODO: Handle non-string inline values?
           }
         }
       }
