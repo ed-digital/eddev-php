@@ -14,18 +14,28 @@ class AdminAssets {
       self::$isBlockEditor = self::screenIsBlockEditor($screen);
       if (self::$isBlockEditor) {
         self::$enabled = true;
+      } else {
+        self::$enabled = apply_filters('ed_should_enqueue_admin_scripts', self::$enabled, $screen);
       }
     });
 
     if (is_admin()) {
       add_action('enqueue_block_assets', function () {
-        self::$enabled = true;
-        self::enqueueAdminScripts();
+        if (self::$enabled) {
+          self::enqueueAdminScripts();
+        }
       });
 
       add_action('enqueue_block_editor_assets', function () {
-        self::$enabled = true;
-        self::enqueueAdminScripts();
+        if (self::$enabled) {
+          self::enqueueAdminScripts();
+        }
+      });
+
+      add_action('admin_enqueue_scripts', function () {
+        if (self::$enabled) {
+          self::enqueueAdminScripts();
+        }
       });
     }
 
@@ -51,7 +61,7 @@ class AdminAssets {
     //   return $tag;
     // }, 10, 3);
 
-    // Add the output of _adpp.graphql to the admin page, in the block editor
+    // Add the output of _app.graphql to the admin page, in the block editor
     add_action('wp_print_scripts', function () {
       if (!self::$isBlockEditor) return;
       $data = EDTemplates::getAppQueryData();
@@ -59,31 +69,24 @@ class AdminAssets {
     });
 
     /**
-     * Swaps to using React development versions in WordPress admin, which provides better debug messages.
+     * Swap to using React development versions in WordPress admin, which provides better debug messages.
      */
+    // Replace `react.min.js` with `react.js` and `react-dom.min.js` with `react-dom.js`
     add_filter("script_loader_src", function ($src, $handle) {
       if (($handle === "react-dom" || $handle === "react")) {
-        if (preg_match("/plugins\/gutenberg\/vendor\/react/", $src)) {
-          // Pre-Gutenberg 12.9.0
-          $files = scandir(ED()->sitePath . "/wp-content/plugins/gutenberg/vendor");
-          foreach ($files as $file) {
-            if (strpos($file, $handle . ".") === 0 && strpos($file, "min") === false) {
-              return ED()->siteURL . "/wp-content/plugins/gutenberg/vendor/" . $file;
-            }
-          }
-        } else {
-          // Gutenberg 13.0+
-          return preg_replace("/\.min\./", ".", $src);
-        }
+        // Gutenberg 13.0+
+        return preg_replace("/\.min\./", ".", $src);
       }
       return $src;
     }, 2, 2);
+    // Needed for blocks to render correctly when React development mode is enabled
+    add_action('acf/input/admin_footer', function () {
+      echo "<script>if (window.acf && window.acf.data) { acf.data.StrictMode = true }</script>";
+    });
   }
 
   static function screenIsBlockEditor(\WP_Screen $screen) {
-    if (method_exists($screen, 'is_block_editor')) {
-      return $screen->is_block_editor();
-    }
+    if (method_exists($screen, 'is_block_editor') && $screen->is_block_editor()) return true;
     if (isset($screen->is_block_editor) && $screen->is_block_editor === true) return true;
     if (isset($screen->base) && $screen->base === "site-editor") return true;
     return false;

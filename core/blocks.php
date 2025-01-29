@@ -299,7 +299,7 @@ class BlockQL extends Config {
           ],
           'resolve' => function ($root, $args, $context, $info) {
             $post = get_post($root->ID);
-            $content = apply_filters('ed_post_content_' . $post->post_type, $post->post_content, $post);
+            $content = apply_filters('ed_blocks_pre_content' . $post->post_type, $post->post_content, $post);
             return $this->processBlocks(parse_blocks($content), $root->ID, $args);
           }
         ]

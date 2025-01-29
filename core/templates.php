@@ -132,6 +132,17 @@ class EDTemplates {
         $data['appData'] = $appQuery->getResult();
       }
 
+      if (is_404()) {
+        if (!$data['viewData']) $data['viewData'] = ['data' => []];
+        /** import { ErrorRouteProps } from 'eddev/routing' */
+        $errorInfo = [
+          'statusCode' => 404,
+          'title' => 'Page Not Found',
+          'message' => 'The page you are looking for does not exist.'
+        ];
+        $data['viewData']['data'] = @array_merge($data['viewData']['data'] ?? [], $errorInfo);
+      }
+
       if ($isJSX) {
         $data['viewType'] = 'react';
         AssetManifest::importChunk($templateFile, "modulepreload");
