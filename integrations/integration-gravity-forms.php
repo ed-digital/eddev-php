@@ -11,15 +11,25 @@ class EDGravityForms {
           'methods' => 'POST',
           'callback' => ['EDGravityForms', 'handleSubmit']
         ]);
-        register_rest_route('ed/v1', '/gf/submit-with-uploads', [
-          'methods' => 'POST',
-          'callback' => ['EDGravityForms', 'handleSubmitWithUploads']
-        ]);
       });
 
       add_action('init', function () {
         self::registerACFField();
       });
+
+      add_action('init', function ($wp) {
+        if ($_SERVER['REQUEST_URI'] == '/wp-json/ed/v1/gf/submit/') {
+          header('Content-Type: application/json');
+          if (@!$_POST['formID']) {
+            echo json_encode(['error' => 'No form ID provided']);
+            exit;
+          }
+          $result = self::handleSubmitFromPostData();
+          unset($result['form']);
+          echo json_encode($result);
+          exit;
+        }
+      }, 1000);
     }
   }
 
@@ -98,11 +108,25 @@ class EDGravityForms {
 
   static function getFormByID($formID) {
     $form = GFAPI::get_form($formID);
-    unset($form['is_trash']);
-    unset($form['is_active']);
-    unset($form['date_created']);
-    unset($form['confirmations']);
-    unset($form['notifications']);
+    $hiddenFields = [
+      "is_trash",
+      "is_active",
+      "date_created",
+      "confirmations",
+      "notifications",
+      "autoResponder",
+      "useCurrentUserAsAuthor",
+      "template_id",
+      "postAuthor",
+      "postCategory",
+      "postStatus",
+      "version",
+      "nextFieldId",
+      "feeds"
+    ];
+    foreach ($hiddenFields as $key) {
+      unset($form[$key]);
+    }
     return $form;
   }
 
@@ -114,7 +138,7 @@ class EDGravityForms {
     return $result;
   }
 
-  static function handleSubmitWithUploads($data) {
+  static function handleSubmitFromPostData() {
     $result = GFAPI::submit_form($_POST['formID'], @$_POST['values']);
 
     return $result;
