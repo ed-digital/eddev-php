@@ -29,7 +29,7 @@ class EDCore {
     $this->siteURL = get_site_url();
 
     if ((bool)$this->readEnvValue("DEBUG_FULL_SECURITY") === false) {
-      $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url());
+      $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url()) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
     }
 
     if (!defined('WPGRAPHQL_PLUGIN_URL')) {

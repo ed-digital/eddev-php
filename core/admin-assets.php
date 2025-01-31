@@ -72,13 +72,15 @@ class AdminAssets {
      * Swap to using React development versions in WordPress admin, which provides better debug messages.
      */
     // Replace `react.min.js` with `react.js` and `react-dom.min.js` with `react-dom.js`
-    add_filter("script_loader_src", function ($src, $handle) {
-      if (($handle === "react-dom" || $handle === "react")) {
-        // Gutenberg 13.0+
-        return preg_replace("/\.min\./", ".", $src);
-      }
-      return $src;
-    }, 2, 2);
+    if (ED()->isDev) {
+      add_filter("script_loader_src", function ($src, $handle) {
+        if (($handle === "react-dom" || $handle === "react")) {
+          // Gutenberg 13.0+
+          return preg_replace("/\.min\./", ".", $src);
+        }
+        return $src;
+      }, 2, 2);
+    }
     // Needed for blocks to render correctly when React development mode is enabled
     add_action('acf/input/admin_footer', function () {
       echo "<script>if (window.acf && window.acf.data) { acf.data.StrictMode = true }</script>";
