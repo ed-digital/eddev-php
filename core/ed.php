@@ -125,24 +125,24 @@ class EDCore {
   }
 
   function enableDevReact() {
-    add_filter("script_loader_src", function ($src, $handle) {
-      if (($handle === "react-dom" || $handle === "react")) {
-        if (preg_match("/plugins\/gutenberg\/vendor\/react/", $src)) {
-          // Pre-Gutenberg 12.9.0
-          $files = scandir(ED()->sitePath . "/wp-content/plugins/gutenberg/vendor");
-          foreach ($files as $file) {
-            if (strpos($file, $handle . ".") === 0 && strpos($file, "min") === false) {
-              return ED()->siteURL . "/wp-content/plugins/gutenberg/vendor/" . $file;
-            }
-          }
-        } else {
-          // Gutenberg 13.0+
-          return preg_replace("/\.min\./", ".", $src);
-        }
-      }
-      return $src;
-    }, 2, 2);
     if ($this->isLocalDev()) {
+      add_filter("script_loader_src", function ($src, $handle) {
+        if (($handle === "react-dom" || $handle === "react")) {
+          if (preg_match("/plugins\/gutenberg\/vendor\/react/", $src)) {
+            // Pre-Gutenberg 12.9.0
+            $files = scandir(ED()->sitePath . "/wp-content/plugins/gutenberg/vendor");
+            foreach ($files as $file) {
+              if (strpos($file, $handle . ".") === 0 && strpos($file, "min") === false) {
+                return ED()->siteURL . "/wp-content/plugins/gutenberg/vendor/" . $file;
+              }
+            }
+          } else {
+            // Gutenberg 13.0+
+            return preg_replace("/\.min\./", ".", $src);
+          }
+        }
+        return $src;
+      }, 2, 2);
       add_action('acf/input/admin_footer', function () {
         echo "<script>if (window.acf && window.acf.data) { acf.data.StrictMode = true }</script>";
       });
