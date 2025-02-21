@@ -142,9 +142,11 @@ class EDCore {
       }
       return $src;
     }, 2, 2);
-    add_action('acf/input/admin_footer', function () {
-      echo "<script>if (window.acf && window.acf.data) { acf.data.StrictMode = true }</script>";
-    });
+    if ($this->isLocalDev()) {
+      add_action('acf/input/admin_footer', function () {
+        echo "<script>if (window.acf && window.acf.data) { acf.data.StrictMode = true }</script>";
+      });
+    }
   }
 
   function init() {
