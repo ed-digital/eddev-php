@@ -571,6 +571,12 @@ class BlockQL extends Config {
             $expanded[] = $patternBlock;
           }
         }
+      } else if ($block['blockName'] === "core/slot-group") {
+        $expanded[] = [
+          'blockName' => 'core/slot-group',
+          'slotId' => @$block['attrs']['props']['id'],
+          'innerBlocks' => $block['innerBlocks']
+        ];
       } else {
         $expanded[] = $block;
       }
