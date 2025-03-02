@@ -178,10 +178,13 @@ class QueryLoader {
   static $cache = [];
 
   static private function loadByName($name) {
-    $optimizedFile = ED()->themePath(".eddev/queries/$name");
+    $optimizedFile = ED()->themePath(".eddev/queries/" . str_replace(".graphql", ".txt", $name));
+    $optimizedFileLegacy = ED()->themePath(".eddev/queries/" . str_replace(".graphql", ".txt", $name));
     $defaultFile = ED()->themePath($name);
     if (file_exists($optimizedFile)) {
       return file_get_contents($optimizedFile);
+    } else if (file_exists($optimizedFileLegacy)) {
+      return file_get_contents($optimizedFileLegacy);
     } else if (file_exists($defaultFile)) {
       // Load the source file and append the fragments
       return file_get_contents($defaultFile) . "\n\n" . FragmentLoader::getAll();
