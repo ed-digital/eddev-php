@@ -179,7 +179,7 @@ class QueryLoader {
 
   static private function loadByName($name) {
     $optimizedFile = ED()->themePath(".eddev/queries/" . str_replace(".graphql", ".txt", $name));
-    $optimizedFileLegacy = ED()->themePath(".eddev/queries/" . str_replace(".graphql", ".txt", $name));
+    $optimizedFileLegacy = ED()->themePath(".eddev/queries/" . $name);
     $defaultFile = ED()->themePath($name);
     if (file_exists($optimizedFile)) {
       return file_get_contents($optimizedFile);
