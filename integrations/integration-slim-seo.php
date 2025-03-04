@@ -17,6 +17,13 @@ class SlimSEOIntegration {
       return $excerpt;
     }, 10, 2);
 
+    add_action('pre_update_option_ss_redirects', function ($items) {
+      foreach ($items as &$item) {
+        $item['ignoreParameters'] = 1;
+      }
+      return $items;
+    }, -1);
+
     add_filter("slim_seo_schema_author_enable", '__return_false');
     add_filter('slim_seo_meta_author', '__return_false');
     add_filter('slim_seo_linkedin_author', '__return_false');
