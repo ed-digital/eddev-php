@@ -130,6 +130,7 @@ class EDBlocks {
       $block['use_post_meta'] = isset($block['postmeta']);
       $block['acf_block_version'] = 2;
       $block['validate'] = true;
+      $block['styles'] = isset($block['blockStyles']) ? $block['blockStyles'] : null;
       acf_register_block_type($block);
       self::$blocks[$block['acfName']] = $block;
     }
@@ -473,6 +474,9 @@ class BlockQL extends Config {
 
     // Extract result data into props
     $props = [];
+    if (!isset($result['data'])) {
+      return null;
+    }
     foreach ($result['data'] as $key => $value) {
       // Extract the block data
       if ($key === 'block') {
@@ -486,6 +490,7 @@ class BlockQL extends Config {
         $props[$key] = $value;
       }
     }
+
 
     return $props;
   }
@@ -523,8 +528,13 @@ class BlockQL extends Config {
           }
         }
       }
-      $block['rule'] = 'react';
-      unset($block['wpClassName']);
+
+      // Add the className attribute as a property, using the default block style if one is set
+      $block['class'] = isset($block['attrs']['className']) ? $block['attrs']['className'] : null;
+      if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
+        $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
+      }
+
       unset($block['attrs']);
       unset($block['innerContent']);
       unset($block['innerHTML']);
