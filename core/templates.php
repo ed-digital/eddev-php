@@ -95,10 +95,14 @@ class EDTemplates {
       $redirect = apply_filters('ed_maybe_redirect', null);
       if ($redirect && isset($redirect['url'])) {
         if ($isPropsRequest) {
+          header('Content-type: text/json');
           echo json_encode([
             'redirect' => $redirect['url'],
             'status' => isset($redirect['status']) ? $redirect['status'] : 301
           ]);
+          exit;
+        } else {
+          wp_redirect($redirect['url'], $redirect['status'] ?? 301);
           exit;
         }
       }
