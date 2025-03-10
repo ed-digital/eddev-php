@@ -1,5 +1,7 @@
 <?php
 
+use ED\FragmentLoader;
+
 class EDInlineTypes {
   static $inlineTypes = [];
 
