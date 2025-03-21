@@ -6,12 +6,14 @@ class EDAdminTables {
 	public $postType = null;
 	public $perPage = null;
 	public $defaultSort = null;
+	public $postSortable = null;
 
-	public function __construct($postType, $columns, $perPage = null, $defaultSort = null) {
+	public function __construct($postType, $columns, $postSortable = false, $perPage = null, $defaultSort = null) {
 		$this->postType = $postType;
 		$this->columns = $columns;
 		$this->perPage = $perPage;
 		$this->defaultSort = $defaultSort;
+		$this->postSortable = $postSortable;
 		if ($columns) {
 			add_filter('manage_edit-' . $postType . '_columns', [$this, 'alterColumnLayout'], 16);
 			add_action('manage_' . $postType . '_posts_custom_column', [$this, 'printColumn'], 16);
@@ -20,7 +22,7 @@ class EDAdminTables {
 		if ($defaultSort || $columns) {
 			add_filter('pre_get_posts', [$this, 'applySorting']);
 		}
-		if ($perPage) {
+		if ($perPage || $postSortable) {
 			add_filter('edit_' . $postType . '_per_page', [$this, 'filterPerPage'], 10, 1);
 		}
 	}
@@ -34,10 +36,11 @@ class EDAdminTables {
 
 		foreach ($postTypes as $name => $label) {
 			$object = get_post_type_object($name);
-			$manager = new EDAdminTables(
+			new EDAdminTables(
 				postType: $name,
-				columns: $object->admin_columns ?? $object->adminColumns ?? [],
-				perPage: $object->admin_per_paeg ?? $object->adminPerPage ?? null,
+				columns: @($object->admin_columns ?? $object->adminColumns ?? []),
+				postSortable: @($object->sortable || $object->admin_sortable || $object->adminSortable),
+				perPage: ($object->admin_per_page ?? $object->adminPerPage ?? null),
 				defaultSort: $object->admin_sort ?? $object->adminSort ?? null
 			);
 		}

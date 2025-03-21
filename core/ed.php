@@ -28,6 +28,8 @@ class EDCore {
     $this->selfPath = dirname(__DIR__);
     $this->siteURL = get_site_url();
 
+    include_once(__dir__ . "/../lib/simple-custom-post-order/simple-custom-post-order.php");
+
     if ((bool)$this->readEnvValue("DEBUG_FULL_SECURITY") === false) {
       $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url()) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
     }
