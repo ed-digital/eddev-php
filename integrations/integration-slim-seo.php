@@ -41,6 +41,9 @@ class SlimSEOIntegration {
         add_filter('slim_seo_open_graph_image_height', function ($value, $tag) use ($image) {
           return $image['height'];
         }, 10, 2);
+        add_filter('slim_seo_open_graph_image_alt', function ($value, $tag) use ($image) {
+          return $image['alt'];
+        }, 10, 2);
       }
     }, -1);
 
