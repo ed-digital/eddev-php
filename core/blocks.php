@@ -535,6 +535,9 @@ class BlockQL extends Config {
         $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
       }
 
+      $block['flags'] = $meta['flags'];
+      $block['tags'] = $meta['tags'];
+
       unset($block['attrs']);
       unset($block['innerContent']);
       unset($block['innerHTML']);
@@ -678,6 +681,8 @@ class BlockQL extends Config {
             'limit' => $limit,
             'maxDepth' => $args['maxDepth'] - 1
           ]);
+        } else {
+          unset($block['innerBlocks']);
         }
         $blocks[] = $block;
       }
@@ -776,10 +781,7 @@ class BlockGrouper {
     $this->result[] = [
       'grouped' => true,
       'blockName' => $this->currentTarget,
-      'attrs' => (object)[],
-      'innerBlocks' => [],
       'innerHTML' => implode("\n", $this->currentGroupHTML),
-      'innerContent' => [],
       'props' => (object)[],
       'rule' => 'render'
     ];
