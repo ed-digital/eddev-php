@@ -10,6 +10,16 @@ class EDTemplates {
     self::hookViewResponder();
     self::hookViews();
     self::hookPageTemplates();
+
+    add_filter('wp_redirect', [__CLASS__, 'handleRedirect'], 10, 2);
+  }
+
+  static function handleRedirect($location, $status) {
+    // Strip out ?_props=... from any redirect URLs
+    if (preg_match("/_props/", $location)) {
+      $location = preg_replace("/\?.*$/", "", $location);
+    }
+    return $location;
   }
 
   private static function hookViews() {
@@ -85,10 +95,14 @@ class EDTemplates {
       $redirect = apply_filters('ed_maybe_redirect', null);
       if ($redirect && isset($redirect['url'])) {
         if ($isPropsRequest) {
+          header('Content-type: text/json');
           echo json_encode([
             'redirect' => $redirect['url'],
             'status' => isset($redirect['status']) ? $redirect['status'] : 301
           ]);
+          exit;
+        } else {
+          wp_redirect($redirect['url'], $redirect['status'] ?? 301);
           exit;
         }
       }

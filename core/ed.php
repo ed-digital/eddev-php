@@ -28,8 +28,10 @@ class EDCore {
     $this->selfPath = dirname(__DIR__);
     $this->siteURL = get_site_url();
 
+    include_once(__dir__ . "/../lib/simple-custom-post-order/simple-custom-post-order.php");
+
     if ((bool)$this->readEnvValue("DEBUG_FULL_SECURITY") === false) {
-      $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url());
+      $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url()) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
     }
 
     if (!defined('WPGRAPHQL_PLUGIN_URL')) {
@@ -79,6 +81,7 @@ class EDCore {
 
     ED\OriginProtection::init();
     ED\AdminAssets::init();
+    ACFEnums::init();
 
     include_once(__DIR__ . "/../integrations/load-integrations.php");
     ed_detect_integrations();
@@ -536,18 +539,28 @@ class EDCore {
   }
 
   function registerEnumFieldType($name, $args) {
-    $install = function () use ($name, $args) {
-      $class = __getACFEnumClass($args['type']);
-      new $class($name, $args);
-    };
-    add_action("acf/include_field_types", $install);
-    if (acf_did('init')) {
-      $install();
-    }
+    ACFEnums::register(new ACFEnumItem(
+      name: $name,
+      label: $args['label'],
+      base_type: $args['type'],
+      choices: $args['options']
+    ));
   }
 
+  /** @deprecated */
   public function register_typed_scalar($typeName, $typescriptType) {
-    EDTypeScriptRegistry::registerType($typeName, $typescriptType);
+    return $this->registerTypedScalar($typeName, $typescriptType);
+  }
+
+  /**
+   * Registers a GraphQL scalar type, with a paired TypeScript type
+   * 
+   * @param string $typeName The name of the scalar type, for use in GraphQL
+   * @param string $typescriptType The TypeScript type to use for this scalar
+   * @param string $typescriptImports An optional import statement to include in the generated TypeScript file
+   */
+  public function registerTypedScalar(string $typeName, string $typescriptType, string|null $typescriptImports = null) {
+    EDTypeScriptRegistry::registerType($typeName, $typescriptType, $typescriptImports);
     register_graphql_scalar($typeName, [
       'serialize' => function ($value) {
         return $value;

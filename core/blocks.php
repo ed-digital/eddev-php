@@ -130,6 +130,7 @@ class EDBlocks {
       $block['use_post_meta'] = isset($block['postmeta']);
       $block['acf_block_version'] = 2;
       $block['validate'] = true;
+      $block['styles'] = isset($block['blockStyles']) ? $block['blockStyles'] : null;
       acf_register_block_type($block);
       self::$blocks[$block['acfName']] = $block;
     }
@@ -473,6 +474,9 @@ class BlockQL extends Config {
 
     // Extract result data into props
     $props = [];
+    if (!isset($result['data'])) {
+      return null;
+    }
     foreach ($result['data'] as $key => $value) {
       // Extract the block data
       if ($key === 'block') {
@@ -486,6 +490,7 @@ class BlockQL extends Config {
         $props[$key] = $value;
       }
     }
+
 
     return $props;
   }
@@ -523,8 +528,16 @@ class BlockQL extends Config {
           }
         }
       }
-      $block['rule'] = 'react';
-      unset($block['wpClassName']);
+
+      // Add the className attribute as a property, using the default block style if one is set
+      $block['class'] = isset($block['attrs']['className']) ? $block['attrs']['className'] : null;
+      if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
+        $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
+      }
+
+      $block['flags'] = $meta['flags'];
+      $block['tags'] = $meta['tags'];
+
       unset($block['attrs']);
       unset($block['innerContent']);
       unset($block['innerHTML']);
@@ -571,6 +584,12 @@ class BlockQL extends Config {
             $expanded[] = $patternBlock;
           }
         }
+      } else if ($block['blockName'] === "core/slot-group") {
+        $expanded[] = [
+          'blockName' => 'core/slot-group',
+          'slotId' => @$block['attrs']['props']['id'],
+          'innerBlocks' => $block['innerBlocks']
+        ];
       } else {
         $expanded[] = $block;
       }
@@ -662,6 +681,8 @@ class BlockQL extends Config {
             'limit' => $limit,
             'maxDepth' => $args['maxDepth'] - 1
           ]);
+        } else {
+          unset($block['innerBlocks']);
         }
         $blocks[] = $block;
       }
@@ -760,10 +781,7 @@ class BlockGrouper {
     $this->result[] = [
       'grouped' => true,
       'blockName' => $this->currentTarget,
-      'attrs' => (object)[],
-      'innerBlocks' => [],
       'innerHTML' => implode("\n", $this->currentGroupHTML),
-      'innerContent' => [],
       'props' => (object)[],
       'rule' => 'render'
     ];

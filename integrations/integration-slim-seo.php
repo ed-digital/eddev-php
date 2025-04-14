@@ -17,9 +17,35 @@ class SlimSEOIntegration {
       return $excerpt;
     }, 10, 2);
 
+    add_action('pre_update_option_ss_redirects', function ($items) {
+      foreach ($items as &$item) {
+        $item['ignoreParameters'] = 1;
+      }
+      return $items;
+    }, -1);
+
     add_filter("slim_seo_schema_author_enable", '__return_false');
     add_filter('slim_seo_meta_author', '__return_false');
     add_filter('slim_seo_linkedin_author', '__return_false');
+
+    add_action('wp_head', function () {
+      $post = get_queried_object();
+      $image = apply_filters('ed_seo_image', $post, null);
+      if ($image && @isset($image['url'])) {
+        add_filter('slim_seo_open_graph_image', function ($value, $tag) use ($image) {
+          return @$image['url'];
+        }, 10, 2);
+        add_filter('slim_seo_open_graph_image_width', function ($value, $tag) use ($image) {
+          return @$image['width'];
+        }, 10, 2);
+        add_filter('slim_seo_open_graph_image_height', function ($value, $tag) use ($image) {
+          return @$image['height'];
+        }, 10, 2);
+        add_filter('slim_seo_open_graph_image_alt', function ($value, $tag) use ($image) {
+          return @$image['alt'];
+        }, 10, 2);
+      }
+    }, -1);
 
     add_action('ed_print_trackers_head', function () {
       $result = get_option('slim_seo');

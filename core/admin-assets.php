@@ -72,13 +72,15 @@ class AdminAssets {
      * Swap to using React development versions in WordPress admin, which provides better debug messages.
      */
     // Replace `react.min.js` with `react.js` and `react-dom.min.js` with `react-dom.js`
-    add_filter("script_loader_src", function ($src, $handle) {
-      if (($handle === "react-dom" || $handle === "react")) {
-        // Gutenberg 13.0+
-        return preg_replace("/\.min\./", ".", $src);
-      }
-      return $src;
-    }, 2, 2);
+    if (ED()->isDev) {
+      add_filter("script_loader_src", function ($src, $handle) {
+        if (($handle === "react-dom" || $handle === "react")) {
+          // Gutenberg 13.0+
+          return preg_replace("/\.min\./", ".", $src);
+        }
+        return $src;
+      }, 2, 2);
+    }
     // Needed for blocks to render correctly when React development mode is enabled
     add_action('acf/input/admin_footer', function () {
       echo "<script>if (window.acf && window.acf.data) { acf.data.StrictMode = true }</script>";
@@ -112,13 +114,11 @@ class AdminAssets {
 
       add_action('wp_print_scripts', function () {
         // Add Vite HMR info
-        echo "<script id='vite-test-header'></script><script id='vite-iframe-header'></script>";
-        // echo "<template id='eddev-admin-iframe-head'>\n<!---VITE_HEADER--->\n</template>";
+        echo "<script id='vite-iframe-header'></script>";
       });
 
       add_action('wp_print_footer_scripts', function () {
-        echo "<script id='vite-test-footer'></script><script id='vite-iframe-footer'></script>";
-        // echo "<template id='eddev-admin-iframe-footer'>\n<!---VITE_HEADER--->\n</template>";
+        echo "<script id='vite-iframe-footer'></script>";
       });
     } else {
       AssetManifest::setup(false, "cms");
