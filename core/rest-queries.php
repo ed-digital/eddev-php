@@ -52,7 +52,6 @@ class QueryHandler {
     // Execute the query
     $result = $query->getResult();
     $result['queryMonitor'] = QueryMonitor::getResult();
-    $result['requestUri'] = $_SERVER['REQUEST_URI'];
 
     // Send any required headers
     $query->sendCacheHeaders();
