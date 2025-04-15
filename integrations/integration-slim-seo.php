@@ -30,7 +30,7 @@ class SlimSEOIntegration {
 
     add_action('wp_head', function () {
       $post = get_queried_object();
-      $image = apply_filters('ed_seo_image', $post, null);
+      $image = apply_filters('ed_seo_image', null, $post);
       if ($image && @isset($image['url'])) {
         add_filter('slim_seo_open_graph_image', function ($value, $tag) use ($image) {
           return @$image['url'];

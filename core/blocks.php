@@ -579,7 +579,7 @@ class BlockQL extends Config {
         $patternId = $block['attrs']['ref'];
         $post = get_post($patternId);
         if ($post) {
-          $patternBlocks = parse_blocks($post->post_content);
+          $patternBlocks = apply_filters("ed_load_pattern_blocks", parse_blocks($post->post_content), $post, $postID, $args);
           foreach ($patternBlocks as $patternBlock) {
             $expanded[] = $patternBlock;
           }
