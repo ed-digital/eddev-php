@@ -537,6 +537,7 @@ class BlockQL extends Config {
 
       $block['flags'] = $meta['flags'];
       $block['tags'] = $meta['tags'];
+      $block['slug'] = $meta['id'] ?? $meta['acfName'];
 
       unset($block['attrs']);
       unset($block['innerContent']);
