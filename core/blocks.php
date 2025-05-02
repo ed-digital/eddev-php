@@ -586,6 +586,12 @@ class BlockQL extends Config {
           }
         }
       } else if ($block['blockName'] === "core/slot-group") {
+        if (isset($args['include']) && @count($args['include']) && $args['flattenExcluded'] && !in_array("core/slot-group", $args['include'])) {
+          foreach ($block['innerBlocks'] ?? [] as $innerBlock) {
+            $expanded[] = $innerBlock;
+          }
+          continue;
+        }
         $expanded[] = [
           'blockName' => 'core/slot-group',
           'slotId' => @$block['attrs']['props']['id'],
@@ -639,18 +645,16 @@ class BlockQL extends Config {
       }
 
       // Apply include/exclude filters
-      if ($meta) {
-        if (is_array($args['include']) && count($args['include'])) {
-          $matches = self::matchBlock($meta, $block, $args['include']);
-          if (!$matches) {
-            $included = false;
-          }
+      if (is_array($args['include']) && count($args['include'])) {
+        $matches = self::matchBlock($meta, $block, $args['include']);
+        if (!$matches) {
+          $included = false;
         }
-        if (is_array($args['exclude']) && count($args['exclude'])) {
-          $matches = self::matchBlock($meta, $block, $args['exclude']);
-          if ($matches) {
-            $included = false;
-          }
+      }
+      if (is_array($args['exclude']) && count($args['exclude'])) {
+        $matches = self::matchBlock($meta, $block, $args['exclude']);
+        if ($matches) {
+          $included = false;
         }
       }
 
@@ -664,7 +668,8 @@ class BlockQL extends Config {
             'include' => $args['include'],
             'exclude' => $args['exclude'],
             'limit' => $limit,
-            'maxDepth' => $args['maxDepth'] - 1
+            'maxDepth' => $args['maxDepth'] - 1,
+            'flattenExcluded' => $included ? false : $args['flattenExcluded']
           ]);
           foreach ($children as $block) {
             $blocks[] = $block;
