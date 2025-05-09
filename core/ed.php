@@ -227,6 +227,16 @@ class EDCore {
         exit;
       });
     }
+    if (preg_match("/^\/\_availability/", $_SERVER['REQUEST_URI'])) {
+      add_action('parse_request', function () {
+        header('Content-Type: application/json');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        echo json_encode([
+          "date" => date("Y-m-d H:i:s"),
+        ]);
+        exit;
+      });
+    }
 
     add_filter('plugins_url', function ($url, $path, $plugin) {
       if (strpos($url, "wp-graphql/wp-graphql-acf/src") > 0) {
