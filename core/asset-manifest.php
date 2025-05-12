@@ -38,7 +38,9 @@ class AssetManifest {
     if (isset(self::$imported[$asset])) return;
     self::$imported[$asset] = true;
 
-    if (str_ends_with($asset, '.css')) {
+    $value = @self::$manifest->$asset;
+
+    if (str_ends_with($asset, '.css') && !$value) {
       self::$assets[] = [
         'file' => ED()->themeURL . "/dist/" . self::$mode . "/" . $asset,
         'type' => 'style',
@@ -47,7 +49,6 @@ class AssetManifest {
       return;
     }
 
-    $value = @self::$manifest->$asset;
     if (!$value) {
       return;
     }
@@ -63,11 +64,18 @@ class AssetManifest {
       }
     }
 
-    self::$assets[] = [
-      'file' => ED()->themeURL . "/dist/" . self::$mode . "/" . $value->file,
-      'type' => 'script',
-      'rel' => $rel
-    ];
+    if (str_ends_with($value->file, '.css')) {
+      self::$assets[] = [
+        'file' => ED()->themeURL . "/dist/" . self::$mode . "/" . $value->file,
+        'type' => 'style'
+      ];
+    } else {
+      self::$assets[] = [
+        'file' => ED()->themeURL . "/dist/" . self::$mode . "/" . $value->file,
+        'type' => 'script',
+        'rel' => $rel
+      ];
+    }
   }
 
   static function collectTags() {
