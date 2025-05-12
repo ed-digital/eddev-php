@@ -539,9 +539,9 @@ class BlockQL extends Config {
         $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
       }
 
-      $block['flags'] = $meta['flags'];
-      $block['tags'] = $meta['tags'];
-      $block['slug'] = $meta['id'] ?? $meta['acfName'];
+      $block['flags'] = @$meta['flags'];
+      $block['tags'] = @$meta['tags'];
+      $block['slug'] = @$meta['id'] ?? @$meta['acfName'];
 
       unset($block['attrs']);
       unset($block['innerContent']);
