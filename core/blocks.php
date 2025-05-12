@@ -301,6 +301,10 @@ class BlockQL extends Config {
           'resolve' => function ($root, $args, $context, $info) {
             $post = get_post($root->ID);
             $content = apply_filters('ed_blocks_pre_content_' . $post->post_type, $post->post_content, $post);
+            $blocks = apply_filters('ed_early_content_blocks', $content, $root->ID, $args);
+            if ($blocks) {
+              return $blocks;
+            }
             return $this->processBlocks(parse_blocks($content), $root->ID, $args);
           }
         ]
