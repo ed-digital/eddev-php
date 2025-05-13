@@ -171,7 +171,9 @@ class EDTemplates {
         ob_end_clean();
       }
 
-      $data['queryMonitor'] = QueryMonitor::getResult();
+      if (!defined('DISABLE_QUERY_MONITOR')) {
+        $data['queryMonitor'] = QueryMonitor::getResult();
+      }
 
       if ($isPropsRequest) {
         header('Content-type: text/json');
