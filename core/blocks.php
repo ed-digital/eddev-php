@@ -482,7 +482,7 @@ class BlockQL extends Config {
       if ($key === 'block') {
         foreach ($value as $blockKey => $result) {
           if ($blockKey !== $meta['graphqlFieldName']) {
-            QueryMonitor::logError("Invalid block name in block query for \"" . $meta['title'] . "\" - expected '" . $meta['graphqlFieldName'] . "' but found \"{$blockKey}\"");
+            QueryMonitor::logNativeError("Invalid block name in block query for \"" . $meta['title'] . "\" - expected '" . $meta['graphqlFieldName'] . "' but found \"{$blockKey}\"");
           }
           $props = array_merge($props, $result ?? []);
         }
