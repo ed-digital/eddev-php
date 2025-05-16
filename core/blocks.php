@@ -301,6 +301,10 @@ class BlockQL extends Config {
           'resolve' => function ($root, $args, $context, $info) {
             $post = get_post($root->ID);
             $content = apply_filters('ed_blocks_pre_content_' . $post->post_type, $post->post_content, $post);
+            $blocks = apply_filters('ed_early_content_blocks', null, $content, $root->ID, $args);
+            if ($blocks) {
+              return $blocks;
+            }
             return $this->processBlocks(parse_blocks($content), $root->ID, $args);
           }
         ]
@@ -482,7 +486,7 @@ class BlockQL extends Config {
       if ($key === 'block') {
         foreach ($value as $blockKey => $result) {
           if ($blockKey !== $meta['graphqlFieldName']) {
-            QueryMonitor::logError("Invalid block name in block query for \"" . $meta['title'] . "\" - expected '" . $meta['graphqlFieldName'] . "' but found \"{$blockKey}\"");
+            QueryMonitor::logNativeError("Invalid block name in block query for \"" . $meta['title'] . "\" - expected '" . $meta['graphqlFieldName'] . "' but found \"{$blockKey}\"");
           }
           $props = array_merge($props, $result ?? []);
         }
@@ -506,7 +510,7 @@ class BlockQL extends Config {
     if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
       $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
     }
-
+    
     if (strpos($block['blockName'], "acf/") === 0) {
       // ACF blocks should have their 
       $meta = EDBlocks::getBlock($block['blockName']);
@@ -535,9 +539,9 @@ class BlockQL extends Config {
         }
       }
 
-      $block['flags'] = $meta['flags'];
-      $block['tags'] = $meta['tags'];
-      $block['slug'] = $meta['id'] ?? $meta['acfName'];
+      $block['flags'] = @$meta['flags'];
+      $block['tags'] = @$meta['tags'];
+      $block['slug'] = @$meta['id'] ?? @$meta['acfName'];
 
       unset($block['attrs']);
       unset($block['innerContent']);

@@ -71,7 +71,7 @@ class QueryMonitor {
         $item = self::current();
         if ($item) {
           foreach ($log as $logItem) {
-            if ($logItem['stack']) {
+            if (isset($logItem['stack'])) {
               $logItem['stack'] = self::cleanBacktrace($logItem['stack']);
             }
             $item->log[] = $logItem;

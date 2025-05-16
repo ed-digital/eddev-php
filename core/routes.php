@@ -83,6 +83,12 @@ class Routes {
         }
       }
     }
+    if (is_callable(@$args['extraVars'])) {
+      $extraVars = $args['extraVars']($vars);
+      if ($extraVars) {
+        $vars = [...$vars, ...$extraVars];
+      }
+    }
     return $vars;
   }
 
@@ -113,9 +119,9 @@ class Routes {
     $route = get_query_var('custom_route');
     if ($route) {
       $args = self::$routes[$route];
-      if (is_string($args['title'])) {
+      if (is_string(@$args['title'])) {
         return $args['title'];
-      } else if (is_callable($args['title'])) {
+      } else if (is_callable(@$args['title'])) {
         return $args['title'](self::getCustomRouteQueryVars());
       }
     }
