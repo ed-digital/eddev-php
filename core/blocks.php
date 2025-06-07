@@ -505,6 +505,12 @@ class BlockQL extends Config {
   }
 
   public function processSingleBlock($block, $postID) {
+    // Add the className attribute as a property, using the default block style if one is set
+    $block['class'] = isset($block['attrs']['className']) ? $block['attrs']['className'] : null;
+    if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
+      $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
+    }
+    
     if (strpos($block['blockName'], "acf/") === 0) {
       // ACF blocks should have their 
       $meta = EDBlocks::getBlock($block['blockName']);
@@ -531,12 +537,6 @@ class BlockQL extends Config {
             $block['values'][$type][$key] = EDInlineTypes::resolveValue($type, $value);
           }
         }
-      }
-
-      // Add the className attribute as a property, using the default block style if one is set
-      $block['class'] = isset($block['attrs']['className']) ? $block['attrs']['className'] : null;
-      if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
-        $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
       }
 
       $block['flags'] = @$meta['flags'];
