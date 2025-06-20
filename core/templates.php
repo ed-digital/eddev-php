@@ -131,6 +131,13 @@ class EDTemplates {
       AssetManifest::importChunk("virtual:eddev-bootup", "main");
       AssetManifest::importChunk("views/_app.tsx", "modulepreload");
 
+      AssetManifest::importChunk(".eddev/dev-spa/entry.client.tsx", 'main');
+      $clientEntry = AssetManifest::getEntryScript();
+      if (!$clientEntry) {
+        AssetManifest::importChunk(".eddev/prod-spa/entry.client.tsx", 'main');
+        $clientEntry = AssetManifest::getEntryScript();
+      }
+
       // Generate the data
       $data = [
         'view' => preg_replace("/(^views\/|\.tsx)/", "", $templateFile),
