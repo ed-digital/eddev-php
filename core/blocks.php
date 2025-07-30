@@ -130,6 +130,7 @@ class EDBlocks {
       $block['use_post_meta'] = isset($block['postmeta']);
       $block['acf_block_version'] = 2;
       $block['validate'] = true;
+      $block['styles'] = isset($block['blockStyles']) ? $block['blockStyles'] : null;
       acf_register_block_type($block);
       self::$blocks[$block['acfName']] = $block;
     }
@@ -300,6 +301,10 @@ class BlockQL extends Config {
           'resolve' => function ($root, $args, $context, $info) {
             $post = get_post($root->ID);
             $content = apply_filters('ed_blocks_pre_content_' . $post->post_type, $post->post_content, $post);
+            $blocks = apply_filters('ed_early_content_blocks', null, $content, $root->ID, $args);
+            if ($blocks) {
+              return $blocks;
+            }
             return $this->processBlocks(parse_blocks($content), $root->ID, $args);
           }
         ]
@@ -473,12 +478,15 @@ class BlockQL extends Config {
 
     // Extract result data into props
     $props = [];
+    if (!isset($result['data'])) {
+      return null;
+    }
     foreach ($result['data'] as $key => $value) {
       // Extract the block data
       if ($key === 'block') {
         foreach ($value as $blockKey => $result) {
           if ($blockKey !== $meta['graphqlFieldName']) {
-            QueryMonitor::logError("Invalid block name in block query for \"" . $meta['title'] . "\" - expected '" . $meta['graphqlFieldName'] . "' but found \"{$blockKey}\"");
+            QueryMonitor::logNativeError("Invalid block name in block query for \"" . $meta['title'] . "\" - expected '" . $meta['graphqlFieldName'] . "' but found \"{$blockKey}\"");
           }
           $props = array_merge($props, $result ?? []);
         }
@@ -486,6 +494,7 @@ class BlockQL extends Config {
         $props[$key] = $value;
       }
     }
+
 
     return $props;
   }
@@ -496,6 +505,12 @@ class BlockQL extends Config {
   }
 
   public function processSingleBlock($block, $postID) {
+    // Add the className attribute as a property, using the default block style if one is set
+    $block['class'] = isset($block['attrs']['className']) ? $block['attrs']['className'] : null;
+    if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
+      $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
+    }
+    
     if (strpos($block['blockName'], "acf/") === 0) {
       // ACF blocks should have their 
       $meta = EDBlocks::getBlock($block['blockName']);
@@ -523,8 +538,11 @@ class BlockQL extends Config {
           }
         }
       }
-      $block['rule'] = 'react';
-      unset($block['wpClassName']);
+
+      $block['flags'] = @$meta['flags'];
+      $block['tags'] = @$meta['tags'];
+      $block['slug'] = @$meta['id'] ?? @$meta['acfName'];
+
       unset($block['attrs']);
       unset($block['innerContent']);
       unset($block['innerHTML']);
@@ -566,11 +584,23 @@ class BlockQL extends Config {
         $patternId = $block['attrs']['ref'];
         $post = get_post($patternId);
         if ($post) {
-          $patternBlocks = parse_blocks($post->post_content);
+          $patternBlocks = apply_filters("ed_load_pattern_blocks", parse_blocks($post->post_content), $post, $postID, $args);
           foreach ($patternBlocks as $patternBlock) {
             $expanded[] = $patternBlock;
           }
         }
+      } else if ($block['blockName'] === "core/slot-group") {
+        if (isset($args['include']) && @count($args['include']) && $args['flattenExcluded'] && !in_array("core/slot-group", $args['include'])) {
+          foreach ($block['innerBlocks'] ?? [] as $innerBlock) {
+            $expanded[] = $innerBlock;
+          }
+          continue;
+        }
+        $expanded[] = [
+          'blockName' => 'core/slot-group',
+          'slotId' => @$block['attrs']['props']['id'],
+          'innerBlocks' => $block['innerBlocks']
+        ];
       } else {
         $expanded[] = $block;
       }
@@ -619,18 +649,16 @@ class BlockQL extends Config {
       }
 
       // Apply include/exclude filters
-      if ($meta) {
-        if (is_array($args['include']) && count($args['include'])) {
-          $matches = self::matchBlock($meta, $block, $args['include']);
-          if (!$matches) {
-            $included = false;
-          }
+      if (is_array($args['include']) && count($args['include'])) {
+        $matches = self::matchBlock($meta, $block, $args['include']);
+        if (!$matches) {
+          $included = false;
         }
-        if (is_array($args['exclude']) && count($args['exclude'])) {
-          $matches = self::matchBlock($meta, $block, $args['exclude']);
-          if ($matches) {
-            $included = false;
-          }
+      }
+      if (is_array($args['exclude']) && count($args['exclude'])) {
+        $matches = self::matchBlock($meta, $block, $args['exclude']);
+        if ($matches) {
+          $included = false;
         }
       }
 
@@ -644,7 +672,8 @@ class BlockQL extends Config {
             'include' => $args['include'],
             'exclude' => $args['exclude'],
             'limit' => $limit,
-            'maxDepth' => $args['maxDepth'] - 1
+            'maxDepth' => $args['maxDepth'] - 1,
+            'flattenExcluded' => $included ? false : $args['flattenExcluded']
           ]);
           foreach ($children as $block) {
             $blocks[] = $block;
@@ -662,6 +691,8 @@ class BlockQL extends Config {
             'limit' => $limit,
             'maxDepth' => $args['maxDepth'] - 1
           ]);
+        } else {
+          unset($block['innerBlocks']);
         }
         $blocks[] = $block;
       }
@@ -760,10 +791,7 @@ class BlockGrouper {
     $this->result[] = [
       'grouped' => true,
       'blockName' => $this->currentTarget,
-      'attrs' => (object)[],
-      'innerBlocks' => [],
       'innerHTML' => implode("\n", $this->currentGroupHTML),
-      'innerContent' => [],
       'props' => (object)[],
       'rule' => 'render'
     ];

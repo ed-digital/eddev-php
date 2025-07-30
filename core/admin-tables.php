@@ -2,17 +2,29 @@
 
 class EDAdminTables {
 
-	public $columnDefs = [];
+	public $columns = [];
 	public $postType = null;
+	public $perPage = null;
+	public $defaultSort = null;
+	public $postSortable = null;
 
-	public function __construct($postType, $defs) {
+	public function __construct($postType, $columns, $postSortable = false, $perPage = null, $defaultSort = null) {
 		$this->postType = $postType;
-		$this->columnDefs = $defs;
-		add_filter('manage_edit-' . $postType . '_columns', [$this, 'alterColumnLayout'], 16);
-		add_action('manage_' . $postType . '_posts_custom_column', [$this, 'printColumn'], 16);
-		add_filter('manage_edit-' . $postType . '_sortable_columns', [$this, 'sortableColumns']);
-		add_filter('pre_get_posts', [$this, 'applySorting']);
-		add_filter('edit_' . $postType . '_per_page', [$this, 'filterPerPage'], 10, 1);
+		$this->columns = $columns;
+		$this->perPage = $perPage;
+		$this->defaultSort = $defaultSort;
+		$this->postSortable = $postSortable;
+		if ($columns) {
+			add_filter('manage_edit-' . $postType . '_columns', [$this, 'alterColumnLayout'], 16);
+			add_action('manage_' . $postType . '_posts_custom_column', [$this, 'printColumn'], 16);
+			add_filter('manage_edit-' . $postType . '_sortable_columns', [$this, 'sortableColumns']);
+		}
+		if ($defaultSort || $columns) {
+			add_filter('pre_get_posts', [$this, 'applySorting']);
+		}
+		if ($perPage || $postSortable) {
+			add_filter('edit_' . $postType . '_per_page', [$this, 'filterPerPage'], 10, 1);
+		}
 	}
 
 	static function init() {
@@ -24,7 +36,13 @@ class EDAdminTables {
 
 		foreach ($postTypes as $name => $label) {
 			$object = get_post_type_object($name);
-			$manager = new EDAdminTables($name, $object->adminColumns ?? $object->admin_columns ?? []);
+			new EDAdminTables(
+				postType: $name,
+				columns: @($object->admin_columns ?? $object->adminColumns ?? []),
+				postSortable: @($object->sortable || $object->admin_sortable || $object->adminSortable),
+				perPage: ($object->admin_per_page ?? $object->adminPerPage ?? null),
+				defaultSort: $object->admin_sort ?? $object->adminSort ?? null
+			);
 		}
 	}
 
@@ -35,10 +53,7 @@ class EDAdminTables {
 		// Only apply an updated value if the value is 20, which is WordPress' default
 		// This allows the user to customize in page settings
 		if ($value === 20) {
-			$postTypeObject = get_post_type_object($this->postType);
-			if (isset($postTypeObject->adminPerPage)) {
-				return $postTypeObject->adminPerPage;
-			}
+			return $this->perPage;
 		}
 		return $value;
 	}
@@ -59,7 +74,7 @@ class EDAdminTables {
 
 		// Add custom columns (and delete any originals if a def is null)
 		$index = 0;
-		foreach ($this->columnDefs as $key => $def) {
+		foreach ($this->columns as $key => $def) {
 			$index++;
 			if (!$def) {
 				unset($cols[$key]);
@@ -85,7 +100,7 @@ class EDAdminTables {
 	}
 
 	public function sortableColumns($columns) {
-		foreach ($this->columnDefs as $key => $def) {
+		foreach ($this->columns as $key => $def) {
 			if ($def && @$def['sortable']) {
 				$columns[$key] = 'col_' . $key;
 			}
@@ -95,8 +110,8 @@ class EDAdminTables {
 
 	public function printColumn($columnName, $ID = null) {
 		global $post;
-		if (isset($this->columnDefs[$columnName])) {
-			$colDef = $this->columnDefs[$columnName];
+		if (isset($this->columns[$columnName])) {
+			$colDef = $this->columns[$columnName];
 			if ($colDef && @$colDef['render']) {
 				$colDef['render']($post);
 			}
@@ -110,16 +125,20 @@ class EDAdminTables {
 
 		if ($query->get('post_type') == $this->postType) {
 			$orderby = $query->get('orderby');
+			// Apply custom column-based sorting
 			if ($orderby && is_string($orderby) && substr($orderby, 0, 4) == 'col_') {
 				$column = substr($orderby, 4);
-				if (isset($this->columnDefs[$column])) {
-					$def = $this->columnDefs[$column];
+				if (isset($this->columns[$column])) {
+					$def = $this->columns[$column];
 					if ($def && isset($def['sortable'])) {
 						foreach ($def['sortable'] as $key => $value) {
 							$query->set($key, $value);
 						}
 					}
 				}
+			}
+			if ($this->defaultSort) {
+				$query->set('orderby', $this->defaultSort);
 			}
 		}
 		return $query;

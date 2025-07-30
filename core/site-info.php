@@ -74,6 +74,7 @@ class EDSiteInfo {
     // Scalar types
     $info['scalarTypes'] = EDTypeScriptRegistry::getTypes();
     $info['postMetaTypes'] = EDTypeScriptRegistry::getPostMeta();
+    $info['scalarTypeImports'] = EDTypeScriptRegistry::getTypeImports();
 
     return $info;
   }

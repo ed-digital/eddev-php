@@ -10,6 +10,16 @@ class EDTemplates {
     self::hookViewResponder();
     self::hookViews();
     self::hookPageTemplates();
+
+    add_filter('wp_redirect', [__CLASS__, 'handleRedirect'], 10, 2);
+  }
+
+  static function handleRedirect($location, $status) {
+    // Strip out ?_props=... from any redirect URLs
+    if (preg_match("/_props/", $location)) {
+      $location = preg_replace("/\?.*$/", "", $location);
+    }
+    return $location;
   }
 
   private static function hookViews() {
@@ -85,10 +95,14 @@ class EDTemplates {
       $redirect = apply_filters('ed_maybe_redirect', null);
       if ($redirect && isset($redirect['url'])) {
         if ($isPropsRequest) {
+          header('Content-type: text/json');
           echo json_encode([
             'redirect' => $redirect['url'],
             'status' => isset($redirect['status']) ? $redirect['status'] : 301
           ]);
+          exit;
+        } else {
+          wp_redirect($redirect['url'], $redirect['status'] ?? 301);
           exit;
         }
       }
@@ -116,6 +130,13 @@ class EDTemplates {
       AssetManifest::setup(!$handleAssets);
       AssetManifest::importChunk("virtual:eddev-bootup", "main");
       AssetManifest::importChunk("views/_app.tsx", "modulepreload");
+
+      AssetManifest::importChunk(".eddev/dev-spa/entry.client.tsx", 'main');
+      $clientEntry = AssetManifest::getEntryScript();
+      if (!$clientEntry) {
+        AssetManifest::importChunk(".eddev/prod-spa/entry.client.tsx", 'main');
+        $clientEntry = AssetManifest::getEntryScript();
+      }
 
       // Generate the data
       $data = [
@@ -157,7 +178,9 @@ class EDTemplates {
         ob_end_clean();
       }
 
-      $data['queryMonitor'] = QueryMonitor::getResult();
+      if (!defined('DISABLE_QUERY_MONITOR')) {
+        $data['queryMonitor'] = QueryMonitor::getResult();
+      }
 
       if ($isPropsRequest) {
         header('Content-type: text/json');

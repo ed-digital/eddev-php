@@ -2,10 +2,14 @@
 
 class EDTypeScriptRegistry {
   static $types = [];
+  static $typescriptImports = [];
   static $postMetaTypes = [];
 
-  static function registerType($typeName, $type) {
+  static function registerType($typeName, $type, $importStatement = null) {
     self::$types[$typeName] = $type;
+    if ($importStatement) {
+      self::$typescriptImports[] = $importStatement;
+    }
   }
 
   static function registerPostMeta($key, $isScalar, $typeName) {
@@ -23,6 +27,10 @@ class EDTypeScriptRegistry {
 
   static function getTypes() {
     return self::$types;
+  }
+
+  static function getTypeImports() {
+    return self::$typescriptImports;
   }
 
   static function getPostMeta() {

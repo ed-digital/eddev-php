@@ -7,6 +7,7 @@ class TemplateParts {
   static $registeredTemplateParts = [];
 
   static function setup() {
+    add_action("acf/init", [__CLASS__, "registerACF"]);
     add_action("graphql_register_types", [__CLASS__, "registerGraphQL"]);
     add_filter('get_block_templates', [__CLASS__, "_filter_block_templates"], 10, 3);
     add_filter('get_block_template', [__CLASS__, "_filter_block_template"], 10, 3);
@@ -141,6 +142,70 @@ class TemplateParts {
       'type' => 'TemplateParts',
       'resolve' => function () {
         return new \stdClass();
+      }
+    ]);
+  }
+  static function registerACF() {
+    // Register our ACF field type, as well as define how it should be treated via GraphQL
+    ED()->registerFieldType('block-pattern', [
+      'label' => 'Synced Block Pattern (ED.)',
+      'type' => 'TemplatePart',
+      // Load the value from ACF, and ensure it's valid.
+      'loadValue' => function ($value, $postID, $field) {
+        return $value;
+      },
+      'renderSettings' => function ($field) {
+        $categories = get_terms([
+          'taxonomy' => 'wp_pattern_category',
+          'hide_empty' => false
+        ]);
+        $categoryChoices = [
+          '' => 'Any Category'
+        ];
+        foreach ($categories as $category) {
+          $categoryChoices[$category->term_id] = $category->name;
+        }
+        acf_render_field_setting($field, array(
+          'label'        => __('Restrict to Category', 'my-textdomain'),
+          'instructions' => __('Choose an optional category to limit selection options', 'my-textdomain'),
+          'name'         => 'categories',
+          'type'         => 'select',
+          'choices' => $categoryChoices
+        ));
+      },
+      // Using the ACF value (from $value), load a post object.
+      'resolve' => function ($root, $args, $context, $info, $value) {
+        if (!$value) return null;
+        $post = get_post($value);
+        if (!$post) return null;
+        return $post;
+      },
+      'render' => function ($field) {
+        $args = [
+          'post_type' => 'wp_block',
+          'posts_per_page' => -1,
+          'post_status' => 'publish',
+          'suppress_filters' => false,
+        ];
+        if (isset($field['categories']) && $field['categories']) {
+          $args['tax_query'] = [
+            'relation' => 'AND',
+            [
+              'taxonomy' => 'wp_pattern_category',
+              'field' => 'term_id',
+              'terms' => $field['categories']
+            ]
+          ];
+        }
+        $patterns = get_posts($args);
+?>
+      <select name="<?= $field['name'] ?>">
+        <option value="">None</option>
+        <? foreach ($patterns as $pattern): ?>
+          <option value="<?= $pattern->ID ?>" <?= ($pattern->ID == $field['value']) ? 'selected' : '' ?>><?= $pattern->post_title ?></option>
+        <? endforeach ?>
+      </select>
+<?php
       }
     ]);
   }
