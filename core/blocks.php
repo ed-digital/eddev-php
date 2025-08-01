@@ -510,7 +510,7 @@ class BlockQL extends Config {
     if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
       $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
     }
-    
+
     if (strpos($block['blockName'], "acf/") === 0) {
       // ACF blocks should have their 
       $meta = EDBlocks::getBlock($block['blockName']);
@@ -694,6 +694,7 @@ class BlockQL extends Config {
         } else {
           unset($block['innerBlocks']);
         }
+        $block = apply_filters("ed_process_single_block", $block);
         $blocks[] = $block;
       }
     }
