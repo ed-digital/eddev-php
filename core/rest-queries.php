@@ -11,12 +11,12 @@ class QueryHandler {
 
   static function _rest_api_init() {
     define('DOING_AJAX', true);
-    register_rest_route('ed/v1', '/query/(?P<name>[A-Z0-9\/\_\-]+)', [
+    register_rest_route('ed/v1', '/query/(?P<queryName>[A-Z0-9\/\_\-]+)', [
       'methods' => 'GET',
       'callback' => ['QueryHandler', 'handleQueryRequest']
     ]);
 
-    register_rest_route('ed/v1', '/mutation/(?P<name>[A-Z0-9\/\_\-]+)', [
+    register_rest_route('ed/v1', '/mutation/(?P<mutationName>[A-Z0-9\/\_\-]+)', [
       'methods' => 'POST',
       'callback' => ['QueryHandler', 'handleMutationRequest']
     ]);
@@ -39,7 +39,7 @@ class QueryHandler {
   static function handleQueryRequest($data) {
 
     // Determine the query name, stripping out any path traversal
-    $name = self::getQueryName($data['name']);
+    $name = self::getQueryName($data['queryName']);
     $params = @json_decode(stripslashes($_GET['params']), true);
 
     $query = new \ED\GraphQLQuery($name, $params);
@@ -63,7 +63,7 @@ class QueryHandler {
 
   static function handleMutationRequest($data) {
     // Determine the query name, stripping out any path traversal
-    $name = self::getQueryName($data['name']);
+    $name = self::getQueryName($data['mutationName']);
     $params = $data->get_json_params();
 
     $query = new \ED\GraphQLQuery($name, $params);
@@ -71,7 +71,7 @@ class QueryHandler {
 
     // Handle invalid query names
     if (!$query->exists()) {
-      return self::error("Unknown query");
+      return self::error("Unknown mutation");
     }
 
     // Execute the query

@@ -179,6 +179,13 @@ class EDGravityForms {
 
     $payload = $data->get_json_params();
     $result = GFAPI::submit_form($payload['formID'], $payload['values']);
+
+    if (!is_wp_error($result)) {
+      if ($result['confirmation_type'] === 'redirect') {
+        $result['confirmation_message'] = '__redirect__' . $result['confirmation_redirect'];
+      }
+    }
+
     return $result;
   }
 
@@ -228,6 +235,13 @@ class EDGravityForms {
     }
     
     $result = GFAPI::submit_form($_POST['formID'], @$_POST['values']);
+
+    if (!is_wp_error($result)) {
+      if ($result['confirmation_type'] === 'redirect') {
+        $result['confirmation_message'] = '__redirect__' . $result['confirmation_redirect'];
+      }
+    }
+
     return $result;
   }
 
