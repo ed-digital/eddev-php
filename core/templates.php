@@ -245,6 +245,9 @@ class EDTemplates {
         }
         $inner = $el->nodeValue;
 
+        if ($tagName === "link" && isset($attributes['id']) && $attributes['id'] === "wp-block-library-css") {
+          continue;
+        }
         if (isset($attributes['data-ignore'])) {
           continue;
         }
