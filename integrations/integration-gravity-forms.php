@@ -237,7 +237,7 @@ class EDGravityForms {
     $result = GFAPI::submit_form($_POST['formID'], @$_POST['values']);
 
     if (!is_wp_error($result)) {
-      if ($result['confirmation_type'] === 'redirect') {
+      if (isset($result['confirmation_type']) && $result['confirmation_type'] === 'redirect') {
         $result['confirmation_message'] = '__redirect__' . $result['confirmation_redirect'];
       }
     }
