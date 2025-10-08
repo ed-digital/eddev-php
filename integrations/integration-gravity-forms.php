@@ -2,7 +2,7 @@
 
 class EDGravityForms {
 
-  static function setup() {    
+  static function setup() {
     if (class_exists("GFAPI")) {
       add_action('graphql_register_types', ["EDGravityForms", "register"]);
 
@@ -19,6 +19,7 @@ class EDGravityForms {
 
       add_action('init', function ($wp) {
         if ($_SERVER['REQUEST_URI'] == '/wp-json/ed/v1/gf/submit/') {
+          header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
           header('Content-Type: application/json');
           if (@!$_POST['formID']) {
             echo json_encode(['error' => 'No form ID provided']);
@@ -133,6 +134,7 @@ class EDGravityForms {
   }
 
   static function handleSubmit($data) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     $form_id = absint($_POST['formID']);
     $form = GFAPI::get_form($form_id);
 
@@ -140,11 +142,11 @@ class EDGravityForms {
       if ($field->get_input_type() === 'fileupload' && $field->multipleFiles) {
         $field_id = 'input_' . $field->id;
         $files = $_FILES[$field_id] ?? null;
-      
+
         if ($files && is_array($files['name'])) {
           $upload_root = GFFormsModel::get_upload_path($form_id, $field->id);
           $upload_url  = GFFormsModel::get_upload_url($form_id, $field->id);
-      
+
           $subdir = date('Y/m');
           $upload_subdir = trailingslashit($upload_root) . $subdir;
           $upload_suburl = trailingslashit($upload_url) . $subdir;
@@ -154,16 +156,16 @@ class EDGravityForms {
           }
 
           $uploaded_urls = [];
-      
+
           foreach ($files['name'] as $i => $original_name) {
             $tmp_name = $files['tmp_name'][$i];
             if (!$tmp_name || !is_uploaded_file($tmp_name)) continue;
-      
+
             $filename = self::generate_safe_filename($original_name, $upload_root);
             $target_path = trailingslashit($upload_subdir) . $filename;
             $public_url = trailingslashit($upload_url) . $filename;
             $absolute_url = trailingslashit($upload_suburl) . $filename;
-      
+
             if (move_uploaded_file($tmp_name, $target_path)) {
               $uploaded_urls[] = $absolute_url;
             }
@@ -171,10 +173,10 @@ class EDGravityForms {
           self::$multi_file_field_urls[$form_id][$field->id][] = $uploaded_urls;
 
           $_POST[$field_id] = json_encode($uploaded_urls);
-          $_POST['values'][$field_id] = json_encode($uploaded_urls);      
+          $_POST['values'][$field_id] = json_encode($uploaded_urls);
           unset($_FILES[$field_id]);
         }
-      }      
+      }
     }
 
     $payload = $data->get_json_params();
@@ -201,11 +203,11 @@ class EDGravityForms {
       if ($field->get_input_type() === 'fileupload' && $field->multipleFiles) {
         $field_id = 'input_' . $field->id;
         $files = $_FILES[$field_id] ?? null;
-      
+
         if ($files && is_array($files['name'])) {
           $upload_root = GFFormsModel::get_upload_path($form_id, $field->id);
           $upload_url  = GFFormsModel::get_upload_url($form_id, $field->id);
-      
+
           $subdir = date('Y/m');
           $upload_subdir = trailingslashit($upload_root) . $subdir;
           $upload_suburl = trailingslashit($upload_url) . $subdir;
@@ -215,16 +217,16 @@ class EDGravityForms {
           }
 
           $uploaded_urls = [];
-      
+
           foreach ($files['name'] as $i => $original_name) {
             $tmp_name = $files['tmp_name'][$i];
             if (!$tmp_name || !is_uploaded_file($tmp_name)) continue;
-      
+
             $filename = self::generate_safe_filename($original_name, $upload_root);
             $target_path = trailingslashit($upload_subdir) . $filename;
             $public_url = trailingslashit($upload_url) . $filename;
             $absolute_url = trailingslashit($upload_suburl) . $filename;
-      
+
             if (move_uploaded_file($tmp_name, $target_path)) {
               $uploaded_urls[] = $absolute_url;
             }
@@ -232,12 +234,12 @@ class EDGravityForms {
           self::$multi_file_field_urls[$form_id][$field->id][] = $uploaded_urls;
 
           $_POST[$field_id] = json_encode($uploaded_urls);
-          $_POST['values'][$field_id] = json_encode($uploaded_urls);      
+          $_POST['values'][$field_id] = json_encode($uploaded_urls);
           unset($_FILES[$field_id]);
         }
-      }      
+      }
     }
-    
+
     $result = GFAPI::submit_form($_POST['formID'], @$_POST['values']);
 
     if (!is_wp_error($result)) {
@@ -275,8 +277,8 @@ class EDGravityForms {
           if ($existing) {
             $wpdb->update(
               "{$wpdb->prefix}gf_entry_meta",
-              [ 'meta_value' => $meta_value ],
-              [ 'entry_id' => $entry['id'], 'meta_key' => $meta_key, 'item_index' => '' ]
+              ['meta_value' => $meta_value],
+              ['entry_id' => $entry['id'], 'meta_key' => $meta_key, 'item_index' => '']
             );
           } else {
             $wpdb->insert(
@@ -296,23 +298,23 @@ class EDGravityForms {
   }
 
   private static array $multi_file_field_urls = [];
-      
+
   static function generate_safe_filename($original_name, $target_dir) {
     $base = sanitize_file_name(pathinfo($original_name, PATHINFO_FILENAME));
     $ext  = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
     $base = preg_replace('/[^a-zA-Z0-9-_]/', '-', $base);
-  
+
     $timestamp = time();
     $filename = "{$base}-{$timestamp}.{$ext}";
     $counter = 1;
-  
+
     while (file_exists(trailingslashit($target_dir) . $filename)) {
       $filename = "{$base}-{$timestamp}-{$counter}.{$ext}";
       $counter++;
     }
-  
+
     return $filename;
-  } 
+  }
 }
 
 EDGravityForms::setup();
