@@ -694,6 +694,7 @@ class BlockQL extends Config {
         } else {
           unset($block['innerBlocks']);
         }
+        $block = apply_filters("ed_process_single_block", $block);
         $blocks[] = $block;
       }
     }
