@@ -459,7 +459,7 @@ class BlockQL extends Config {
 
   public static function runBlockQuery($meta, $attributes, $postID) {
     // Load the query
-    $query = new \ED\GraphQLQuery("blocks/" . $meta['id'], EDTemplates::getQueryParams());
+    $query = new \ED\GraphQLQuery("blocks/" . $meta['id'], EDTemplates::$queryParams ?? EDTemplates::getQueryParams());
 
     if (!$query->exists()) return null;
 
@@ -510,7 +510,7 @@ class BlockQL extends Config {
     if (!isset($block['class']) && isset($meta['defaultBlockStyle'])) {
       $block['class'] = "is-style-" . $meta['defaultBlockStyle'];
     }
-    
+
     if (strpos($block['blockName'], "acf/") === 0) {
       // ACF blocks should have their 
       $meta = EDBlocks::getBlock($block['blockName']);

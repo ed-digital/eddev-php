@@ -5,6 +5,7 @@ use ED\AssetManifest;
 class EDTemplates {
 
   static $templates;
+  static $queryParams;
 
   static function init() {
     self::hookViewResponder();
@@ -84,7 +85,6 @@ class EDTemplates {
 
   private static function hookViewResponder() {
     add_filter('template_include', function ($template) {
-
       // Is this a JSON request? Or a regular page view?
       $isPropsRequest = isset($_GET['_props']) && !!$_GET['_props'];
       $handleAssets = !$isPropsRequest;
@@ -110,8 +110,10 @@ class EDTemplates {
       $isJSX = preg_match("/\.(tsx|ts|jsx|js)$/", $template);
       $templateFile = trim(str_replace(ED()->sitePath, "", str_replace(ED()->themePath, "", $template)), "/");
 
+      self::$queryParams = self::getQueryParams();
+
       // Cache and generation headers, for non-logged-in users
-      $query = new \ED\GraphQLQuery($templateFile, self::getQueryParams());
+      $query = new \ED\GraphQLQuery($templateFile, self::$queryParams);
 
       if ($debugQueries) {
         // set_error_handler(function ($errno, $errstr, $errfile, $errline) {
