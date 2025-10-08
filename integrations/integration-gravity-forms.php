@@ -182,18 +182,8 @@ class EDGravityForms {
 
     if (!is_wp_error($result)) {
       $entry_id = $result['entry_id'] ?? null;
-
-      setcookie(
-        'gf_entry_id_' . $form_id,
-        (string) $entry_id,
-        time() + 60,
-        '/',
-        COOKIE_DOMAIN ?: '',
-        is_ssl(),
-        false
-      );
-
       $result['entry_id'] = $entry_id;
+      $result['confirmation_message'] .= '<span id="gf-entry" data-entry-id="' . esc_attr($entry_id) . '"></span>';
 
       if ($result['confirmation_type'] === 'redirect') {
         $result['confirmation_message'] = '__redirect__' . $result['confirmation_redirect'];
@@ -252,18 +242,8 @@ class EDGravityForms {
 
     if (!is_wp_error($result)) {
       $entry_id = $result['entry_id'] ?? null;
-
-      setcookie(
-        'gf_entry_id_' . $form_id,
-        (string) $entry_id,
-        time() + 60,
-        '/',
-        COOKIE_DOMAIN ?: '',
-        is_ssl(),
-        false
-      );
-
       $result['entry_id'] = $entry_id;
+      $result['confirmation_message'] .= '<span id="gf-entry" data-entry-id="' . esc_attr($entry_id) . '"></span>';
 
       if (isset($result['confirmation_type']) && $result['confirmation_type'] === 'redirect') {
         $result['confirmation_message'] = '__redirect__' . $result['confirmation_redirect'];
