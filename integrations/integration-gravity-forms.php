@@ -245,6 +245,11 @@ class EDGravityForms {
     if (!is_wp_error($result)) {
       $entry_id = $result['entry_id'] ?? null;
       $result['entry_id'] = $entry_id;
+
+      if (empty($result['confirmation_message'])) {
+        $result['confirmation_message'] = '';
+      }
+      
       $result['confirmation_message'] .= '<span id="gf-entry" data-entry-id="' . esc_attr($entry_id) . '"></span>';
 
       if (isset($result['confirmation_type']) && $result['confirmation_type'] === 'redirect') {
