@@ -44,6 +44,7 @@ class Routes {
   static function registerRoute($pattern, $args) {
     $key = md5($pattern);
     $uri = 'index.php?custom_route=' . $key;
+    $args['pattern'] = $pattern;
     if (@$args['queryVars']) {
       foreach (@$args['queryVars'] as $i => $var) {
         if (preg_match("/^\\$[0-9]+/", $var)) {

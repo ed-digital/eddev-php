@@ -140,10 +140,43 @@ class EDTemplates {
         $clientEntry = AssetManifest::getEntryScript();
       }
 
+      $adminData = [
+        'editLink' => null,
+        'kind' => null,
+        'postId' => null,
+        'postType' => null,
+        'customRoute' => null,
+        'params' => self::$queryParams
+      ];
+
+      $queriedObjectId = get_queried_object_id();
+
+      if (get_queried_object_id()) {
+        $adminData['editLink'] = self::getPostEditLink(get_queried_object_id());
+        $adminData['postId'] = $queriedObjectId;
+        $adminData['postType'] = get_post_type($queriedObjectId);
+        $adminData['kind'] = 'post';
+      } else if (is_archive()) {
+        $adminData['postType'] = get_post_type($queriedObjectId);
+        $adminData['kind'] = 'archive';
+      } else if (is_404()) {
+        $adminData['kind'] = '404';
+      }
+
+      if (Routes::isCustomRoute()) {
+        $adminData['kind'] = 'custom';
+        $route = Routes::getCustomRoute();
+        $adminData['customRoute'] = [
+          'pattern' => $route['pattern'] ?? null,
+          'params' => Routes::getCustomRouteQueryVars()
+        ];
+      }
+
       // Generate the data
       $data = [
         'view' => preg_replace("/(^views\/|\.tsx)/", "", $templateFile),
-        'editLink' => current_user_can('edit_posts') ? get_edit_post_link(0, '') : null
+        /** Admin data gets rot13 and base64 encoded. It's obfuscated enough to prevent casual inspection */
+        'admin' => str_rot13(base64_encode(json_encode($adminData)))
       ];
 
       // Send cache headers
@@ -353,5 +386,48 @@ class EDTemplates {
       'appData' => self::getAppQueryData(),
       'trackers' => EDTrackers::collectAll()
     ];
+  }
+
+  static function getPostEditLink($postId) {
+    $post = get_post($postId);
+
+    if (!$post) {
+      return;
+    }
+
+    if ('revision' === $post->post_type) {
+      $action = '';
+    } else {
+      $action = '&action=edit';
+    }
+
+    $post_type_object = get_post_type_object($post->post_type);
+
+    if (! $post_type_object) {
+      return;
+    }
+
+    $link = '';
+
+    if ('wp_template' === $post->post_type || 'wp_template_part' === $post->post_type) {
+      $slug = urlencode(get_stylesheet() . '//' . $post->post_name);
+      $link = admin_url(sprintf($post_type_object->_edit_link, $post->post_type, $slug));
+    } elseif ('wp_navigation' === $post->post_type) {
+      $link = admin_url(sprintf($post_type_object->_edit_link, (string) $post->ID));
+    } elseif ($post_type_object->_edit_link) {
+      $link = admin_url(sprintf($post_type_object->_edit_link . $action, $post->ID));
+    }
+
+    /**
+     * Filters the post edit link.
+     *
+     * @since 2.3.0
+     *
+     * @param string $link    The edit link.
+     * @param int    $post_id Post ID.
+     * @param string $context The link context. If set to 'display' then ampersands
+     *                        are encoded.
+     */
+    return apply_filters('get_edit_post_link', $link, $post->ID, '');
   }
 }

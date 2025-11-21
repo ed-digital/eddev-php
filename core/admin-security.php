@@ -73,6 +73,7 @@ class EDSuperAdmin {
     // Add the ed_admin role to the adminstrator role
     // It'll be removed at runtime if the user is not the configured super admin
     $role = get_role('administrator');
+    if (!$role) return;
     $role->add_cap('ed_admin');
   }
 

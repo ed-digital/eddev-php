@@ -91,6 +91,12 @@ class GraphQLQuery {
         'query' => $this->queryText,
         'variables' => $this->variables
       ]);
+      if (isset($result['errors'])) {
+        unset($result['errors']);
+      }
+      if (isset($result['extensions'])) {
+        unset($result['extensions']);
+      }
       $this->monitorEntry = \QueryMonitor::pop();
     }
 

@@ -41,6 +41,28 @@ class EDBlocks {
       }
     }, -5);
 
+    add_filter("acf/location/rule_values/type=block", function ($values, $rule) {
+      $blocks = EDBlocks::$blocks;
+      $options = [];
+
+      foreach ($blocks as $block) {
+        $group = ucfirst(explode("/", $block['id'])[0]);
+        if (!isset($options[$group])) {
+          $options[$group] = [];
+        }
+        $options[$group][$block['acfName']] = $block['title'] . " (" . $block['id'] . ")";
+      }
+
+      ksort($options);
+
+      foreach ($options as $group => $opts) {
+        asort($opts);
+        $options[$group] = $opts;
+      }
+
+      return $options;
+    }, 10, 2);
+
     add_filter('block_categories_all', function ($categories) {
       $categories[] = array(
         'slug' => 'layouts',
@@ -223,9 +245,17 @@ class BlockQL extends Config {
 
   public $rules = [];
 
+  static $totalCalls = 0;
+
   public function init(TypeRegistry $type_registry) {
     $this->type_registry = $type_registry;
     $this->rules = $this->getBlockProcessingRules();
+
+    add_action('graphql_return_response', function () {
+      if (self::$totalCalls > 10 && count(QueryMonitor::$stack) === 1) {
+        Console::warn("`contentBlocks` were selected " . self::$totalCalls . " times during this query. Performance may suffer, due to post_content parsing.");
+      }
+    }, 50, 0);
 
     // Register the root block query
     register_graphql_object_type('CurrentBlock', [
@@ -300,6 +330,7 @@ class BlockQL extends Config {
           ],
           'resolve' => function ($root, $args, $context, $info) {
             $post = get_post($root->ID);
+            BlockQL::$totalCalls++;
             $content = apply_filters('ed_blocks_pre_content_' . $post->post_type, $post->post_content, $post);
             $blocks = apply_filters('ed_early_content_blocks', null, $content, $root->ID, $args);
             if ($blocks) {

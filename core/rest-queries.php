@@ -51,7 +51,9 @@ class QueryHandler {
 
     // Execute the query
     $result = $query->getResult();
-    $result['queryMonitor'] = QueryMonitor::getResult();
+    if (!defined('DISABLE_QUERY_MONITOR')) {
+      $result['queryMonitor'] = QueryMonitor::getResult();
+    }
 
     // Send any required headers
     $query->sendCacheHeaders();

@@ -26,6 +26,8 @@ class AdminAssets {
         }
       });
 
+      remove_action('enqueue_block_editor_assets', 'wp_enqueue_editor_block_directory_assets');
+      add_filter('should_load_remote_block_patterns', '__return_false');
       add_action('enqueue_block_editor_assets', function () {
         if (self::$enabled) {
           self::enqueueAdminScripts();

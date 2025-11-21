@@ -2,6 +2,8 @@
 
 namespace ED;
 
+use EDThemeInfo;
+
 class TemplateParts {
 
   static $registeredTemplateParts = [];
@@ -12,6 +14,22 @@ class TemplateParts {
     add_filter('get_block_templates', [__CLASS__, "_filter_block_templates"], 10, 3);
     add_filter('get_block_template', [__CLASS__, "_filter_block_template"], 10, 3);
     add_filter('wp_theme_json_data_theme', [__CLASS__, '_filter_theme_json'], 10, 1);
+
+    add_action('acf/init', function () {
+      $themeInfo = EDThemeInfo::load();
+      if (isset($themeInfo['templateParts'])) {
+        foreach ($themeInfo['templateParts'] as $key => $part) {
+          self::registerTemplatePart([
+            "name" => $key,
+            "title" => $part['title'],
+            "area" => $part['area'],
+            "blockSlug" => $part['blockSlug'],
+            "defaultContent" => "<!-- wp:" . $part['blockAcfName'] . " -->
+<!-- /wp:" . $part['blockAcfName'] . " -->"
+          ]);
+        }
+      }
+    });
   }
 
   static function registerTemplatePart($meta) {
@@ -36,6 +54,7 @@ class TemplateParts {
   }
 
   static function getInitialContent($meta) {
+    if (isset($meta['defaultContent']) && is_string($meta['defaultContent'])) return $meta['defaultContent'];
     return "<!-- wp:paragraph -->
 <!-- /wp:paragraph -->";
   }

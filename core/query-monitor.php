@@ -1,8 +1,12 @@
 <?php
 
+use GraphQL\Type\Definition\ResolveInfo;
+
 class QueryMonitor {
   static $stack = [];
   static $result = [];
+
+  static ResolveInfo|null $currentResolveInfo = null;
 
   static function setup() {
     // Potentially deprecate along with the Console class
@@ -11,8 +15,9 @@ class QueryMonitor {
       if (!$item) return;
       $item->log[] = [
         "type" => $entry->type,
-        "data" => $entry->args,
-        "stack" => $entry->trace
+        "message" => $entry->args,
+        ...self::captureFieldInfo(),
+        "trace" => $entry->trace
       ];
     }, 10, 1);
 
@@ -37,10 +42,12 @@ class QueryMonitor {
         if (!$item) return false;
         $item->log[] = [
           "type" => "php_" . strtolower($type),
+          ...self::captureFieldInfo(),
           "message" => $errstr,
           "file" => str_replace(ED()->themePath, '.', $errfile),
           "line" => $errline,
-          "stack" => self::getBacktrace()
+          "kind" => "error_handler",
+          "trace" => self::getBacktrace()
         ];
       }, E_WARNING | E_ERROR | E_NOTICE);
     });
@@ -48,6 +55,20 @@ class QueryMonitor {
     add_action('graphql_after_execute', function () {
       restore_error_handler();
     });
+
+    add_filter('graphql_before_resolve_field', function ($source, $args, $context, $info, $field_resolver, $type_name, $field_key, $field) {
+      self::$currentResolveInfo = $info;
+      // if ($type_name . "." . $field_key === "CaseStudy_Info.aspect") {
+      //   // ed_dump("Resolving field:", $type_name . "." . $field_key);
+      //   // var_dump($info->path);
+      //   $info = [
+      //     'path'           => $info->path,
+      //     'parentType'     => $info->parentType->name,
+      //     'fieldName'      => $info->fieldName,
+      //     'returnType'     => $info->returnType->name ? $info->returnType->name : $info->returnType,
+      //   ];
+      // }
+    }, 10, 8);
 
     // Capture any errors that occur during a GraphQL execution
     add_action('graphql_return_response', function ($filtered_response) {
@@ -57,6 +78,8 @@ class QueryMonitor {
         foreach ($filtered_response['errors'] as $err) {
           $item->log[] = [
             "type" => "error",
+            "kind" => "graphql_return_response",
+            ...self::captureFieldInfo(),
             ...$err
           ];
         }
@@ -71,8 +94,8 @@ class QueryMonitor {
         $item = self::current();
         if ($item) {
           foreach ($log as $logItem) {
-            if (isset($logItem['stack'])) {
-              $logItem['stack'] = self::cleanBacktrace($logItem['stack']);
+            if (isset($logItem['trace'])) {
+              $logItem['trace'] = self::cleanBacktrace($logItem['trace']);
             }
             $item->log[] = $logItem;
           }
@@ -85,9 +108,9 @@ class QueryMonitor {
     }, 10000, 1);
   }
 
-  private static function cleanBacktrace($stack) {
+  private static function cleanBacktrace($trace) {
     $result = [];
-    foreach ($stack as $item) {
+    foreach ($trace as $item) {
       if (!preg_match("/(webonyx\/graphql-php|wp\-graphql\/wp-graphql)/", $item)) {
         $item = str_replace(ED()->themePath, ".", $item);
         $result[] = $item;
@@ -96,7 +119,7 @@ class QueryMonitor {
     return $result;
   }
 
-  private static function getBacktrace() {
+  static function getBacktrace() {
     $trace = debug_backtrace(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
     $trace = !empty($trace)
       ?
@@ -135,12 +158,27 @@ class QueryMonitor {
     return @self::$stack[count(self::$stack) - 1];
   }
 
+  static function captureFieldInfo() {
+    $info = self::$currentResolveInfo;
+    if (!$info) {
+      return [];
+    } else {
+      return [
+        'path' => $info->path,
+        'parentType' => $info->parentType->name,
+        'fieldName' => $info->fieldName,
+        // 'returnType' => $info->returnType->name ? $info->returnType->name : $info->returnType,
+      ];
+    }
+  }
+
   static function logNativeError($err) {
     $ctx = self::current();
     if (!$ctx) return;
     $ctx->log[] = [
       "type" => "error",
-      $err
+      ...self::captureFieldInfo(),
+      ...$err
     ];
   }
 
@@ -149,6 +187,7 @@ class QueryMonitor {
     if (!$ctx) return;
     $ctx->log[] = [
       "type" => "debug",
+      ...self::captureFieldInfo(),
       "message" => $msg
     ];
   }

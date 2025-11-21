@@ -9,11 +9,14 @@ class EDConsoleEntry {
     $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 0);
     foreach ($backtrace as $item) {
       if ($item['file'] === __FILE__ || preg_match("/(webonyx\/graphql-php|wp\-graphql\/wp-graphql)/", $item['file'])) continue;
+      $call = $item['function'] . "()";
+      if (@$item['class']) {
+        $call = $item['class'] . $item['type'] . $item['function'] . "()";
+      }
       $this->trace[] = [
-        'file' => str_replace(ED()->themePath, '', $item['file']),
+        'file' => str_replace(ED()->sitePath, "", str_replace(ED()->themePath, '.', $item['file'])),
         'line' => @$item['line'],
-        'function' => @$item['function'],
-        'type' => @$item['type']
+        'call' => $call ?? null
       ];
     }
   }

@@ -217,8 +217,11 @@ class EDCore {
         $query = new \ED\GraphQLQuery("views/_app", []);
         $query->setDecorator("withTrackers", function ($data) {
           return [
-            "appData" => $data,
-            "trackers" => EDTrackers::collectAll()
+            "appData" => [
+              ...$data,
+              "queryMonitor" => QueryMonitor::getResult()
+            ],
+            "trackers" => EDTrackers::collectAll(),
           ];
         });
         $result = $query->getResult();
@@ -548,11 +551,20 @@ class EDCore {
     }
   }
 
+  /**
+   * Registers an ACF enum field type.
+   * 
+   * @param string $name The name of the enum field type
+   * @param array $args The arguments for the enum field type. Should include:
+   *  - "label" => The label for the enum field type
+   *  - "type" => 'select', 'button_group', 'radio' or 'checkbox'
+   *  - "options" => An associative array of options for the enum
+   */
   function registerEnumFieldType($name, $args) {
     ACFEnums::register(new ACFEnumItem(
       name: $name,
-      label: $args['label'],
-      base_type: $args['type'],
+      label: $args['label'] ?? $name,
+      base_type: $args['type'] ?? "select",
       choices: $args['options']
     ));
   }
