@@ -489,8 +489,19 @@ class BlockQL extends Config {
   }
 
   public static function runBlockQuery($meta, $attributes, $postID) {
+    // Determine if this is a 'post meta' block
+    $isPostMetaBlock = isset($meta['use_post_meta']) && $meta['use_post_meta'];
+
+    // Get the GraphQL parameters
+    $params = EDTemplates::$queryParams ?? EDTemplates::getQueryParams();
+
+    // For post meta blocks, override the postId parameter
+    $params['postId'] = $postID;
+
+    // ed_dump("Params for block \"" . $meta['id'] . "\": ", $params, $postID);
+
     // Load the query
-    $query = new \ED\GraphQLQuery("blocks/" . $meta['id'], EDTemplates::$queryParams ?? EDTemplates::getQueryParams());
+    $query = new \ED\GraphQLQuery("blocks/" . $meta['id'], $params);
 
     if (!$query->exists()) return null;
 
@@ -500,7 +511,9 @@ class BlockQL extends Config {
         $attributes['id'] = "block_" . acf_get_block_id($attributes, [], isset($meta['use_post_meta']));
       }
       BlockQLRoot::setContext($attributes);
-      if (isset($meta['use_post_meta'])) {
+
+      // For post meta blocks, setup additional context from ACF
+      if ($isPostMetaBlock) {
         acf_add_block_meta_values($attributes, $postID);
       }
     }
@@ -600,6 +613,7 @@ class BlockQL extends Config {
     'maxDepth' => null,
     'flattenExcluded' => false
   ]) {
+
     $args = [
       'include' => isset($args['include']) ? $args['include'] : null,
       'exclude' => isset($args['exclude']) ? $args['exclude'] : null,
