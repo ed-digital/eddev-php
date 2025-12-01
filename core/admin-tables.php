@@ -50,6 +50,9 @@ class EDAdminTables {
 	 * Override the default number of items per page in the admin
 	 */
 	public function filterPerPage($value) {
+		if ($this->postSortable) {
+			return -1; // Show all items
+		}
 		// Only apply an updated value if the value is 20, which is WordPress' default
 		// This allows the user to customize in page settings
 		if ($value === 20) {
