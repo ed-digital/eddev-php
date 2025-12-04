@@ -127,6 +127,14 @@ class EDGravityForms {
       "nextFieldId",
       "feeds"
     ];
+
+    if (is_array($form['fields'])) {
+      foreach ($form['fields'] as &$field) {
+        if ($field->type === "captcha") {
+          $field->captchaSiteKey = $field->get_site_key();
+        }
+      }
+    }
     foreach ($hiddenFields as $key) {
       unset($form[$key]);
     }
@@ -249,7 +257,7 @@ class EDGravityForms {
       if (empty($result['confirmation_message'])) {
         $result['confirmation_message'] = '';
       }
-      
+
       $result['confirmation_message'] .= '<span id="gf-entry" data-entry-id="' . esc_attr($entry_id) . '"></span>';
 
       if (isset($result['confirmation_type']) && $result['confirmation_type'] === 'redirect') {
