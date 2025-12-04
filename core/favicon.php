@@ -1,12 +1,17 @@
 <?php
 
+// ed_dump("Loading favicon.php");
+// exit;
 class EDFavicon {
   static function setup() {
     add_action('do_faviconico', function () {
-      $path = ED()->themePath . "/favicon.ico";
-      if (file_exists($path)) {
+      $favicon = self::find([
+        "/favicon.ico",
+        "/assets/favicon-out/favicon.ico",
+      ]);
+      if ($favicon) {
         header("Content-type: image/x-icon");
-        readfile($path);
+        readfile($favicon);
         exit;
       }
     });
@@ -16,12 +21,29 @@ class EDFavicon {
     });
   }
 
+  static function find($paths) {
+    foreach ($paths as $path) {
+      $path = preg_replace("/^\//", "", $path);
+      if (file_exists(ED()->themePath . "/" . $path)) {
+        return str_replace(ED()->sitePath, "", ED()->themePath) . "/" . $path;
+      }
+    }
+    return null;
+  }
+
   static function printFaviconTags() {
     $lines = [];
 
+    $config = ED()->getConfig('favicon');
+
     // SVG icon
-    if (file_exists(ED()->themePath . "/assets/favicon/favicon.svg")) {
-      $lines[] = "<link rel=\"icon\" href=\"" . esc_attr(ED()->themeURL . "/assets/favicon/favicon.svg") . "\" />";
+    $svgFavicon = self::find([
+      "/assets/favicon-out/favicon.svg",
+      "/favicon.svg",
+      $config['mode'] === 'svg' ? $config['default'] ?? "/assets/favicon/favicon.svg" : null,
+    ]);
+    if ($svgFavicon) {
+      $lines[] = "<link rel=\"icon\" href=\"" . esc_attr($svgFavicon) . "\" />";
     }
 
     // Regular PNG icons
