@@ -2,6 +2,8 @@
 
 class Routes {
   static $routes = [];
+  static $keys = [];
+
   static function init() {
     add_filter('query_vars', function ($query_vars) {
       $query_vars[] = 'custom_route';
@@ -19,6 +21,9 @@ class Routes {
     add_filter('wp_title', [__CLASS__, 'filterTitle'], -1000, 1);
     add_filter('wpseo_title', [__CLASS__, 'filterTitle'], -1000, 1);
     add_filter('wpseo_frontend_presentation', [__CLASS__, 'filterOpenGraph'], -1000, 1);
+
+    add_action('registered_post_type', [__CLASS__, 'registeredPostType'], 10, 2);
+    add_action('registered_taxonomy', [__CLASS__, 'registeredTaxonomy'], 10, 3);
   }
 
   /**
@@ -54,6 +59,7 @@ class Routes {
       }
     }
     self::$routes[$key] = $args;
+    self::$keys['route-' . $key] = md5(json_encode([$pattern, $args]));
     add_rewrite_rule($pattern, $uri, $args['position'] ?? 'top');
   }
 
@@ -148,6 +154,28 @@ class Routes {
       }
     }
     return $presentation;
+  }
+
+  static function registeredPostType($name, $args) {
+    if (preg_match("/wp_|acf|revision|page|nav_menu|changeset|attachment|css/", $name)) {
+      return;
+    }
+    self::$keys['post-type-' . $name] = md5(json_encode($args));
+  }
+
+  static function registeredTaxonomy($name, $objects, $args) {
+    if (preg_match("/wp_|acf/", $name)) {
+      return;
+    }
+    self::$keys['taxonomy-' . $name] = md5(json_encode([$objects, $args]));
+  }
+
+  static function apply() {
+    $key = md5(json_encode(self::$keys));
+    if (get_option('ed_routes_key', '') !== $key) {
+      self::flush();
+      update_option('ed_routes_key', $key, true);
+    }
   }
 }
 

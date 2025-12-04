@@ -210,6 +210,8 @@ class EDCore {
     // Include backend folder
     $this->includeBackendFiles();
 
+    Routes::apply();
+
     // Return app data when requested.
     if (preg_match("/^\/\_appdata/", $_SERVER['REQUEST_URI'])) {
       add_action('parse_request', function () {
