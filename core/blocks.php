@@ -495,8 +495,10 @@ class BlockQL extends Config {
     // Get the GraphQL parameters
     $params = EDTemplates::$queryParams ?? EDTemplates::getQueryParams();
 
-    // For post meta blocks, override the postId parameter
-    $params['postId'] = $postID;
+    // Override the postId parameter when provided
+    if ($postID) {
+      $params['postId'] = $postID;
+    }
 
     // ed_dump("Params for block \"" . $meta['id'] . "\": ", $params, $postID);
 
