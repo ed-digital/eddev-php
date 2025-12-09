@@ -37,15 +37,13 @@ class EDFavicon {
     $config = ED()->getConfig('favicon');
 
     // SVG icon
-    if (!empty($config) && isset($config['mode'])) {
-      $svgFavicon = self::find([
-        "/assets/favicon-out/favicon.svg",
-        "/favicon.svg",
-        $config['mode'] === 'svg' ? $config['default'] ?? "/assets/favicon/favicon.svg" : null,
-      ]);
-      if ($svgFavicon) {
-        $lines[] = "<link rel=\"icon\" href=\"" . esc_attr($svgFavicon) . "\" />";
-      }
+    $svgFavicon = self::find([
+      "/assets/favicon-out/favicon.svg",
+      "/favicon.svg",
+      @$config['mode'] === 'svg' ? @$config['default'] ?? "/assets/favicon/favicon.svg" : null,
+    ]);
+    if ($svgFavicon) {
+      $lines[] = "<link rel=\"icon\" href=\"" . esc_attr($svgFavicon) . "\" />";
     }
 
     // Regular PNG icons
