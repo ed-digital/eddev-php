@@ -1,6 +1,7 @@
 <?php
 
 use ED\AssetManifest;
+use ED\TemplateParts;
 use WPGraphQL\Registry\TypeRegistry;
 use WPGraphQL\ACF\Config;
 
@@ -336,7 +337,13 @@ class BlockQL extends Config {
             if ($blocks) {
               return $blocks;
             }
-            return $this->processBlocks(parse_blocks($content), $root->ID, $args);
+            $blocks = $this->processBlocks(parse_blocks($content), $root->ID, $args);
+            if (@isset($post->post_type) && $post->post_type === 'wp_template_part' && is_array($blocks)) {
+              foreach ($blocks as &$block) {
+                $block['part'] = $root->post_name;
+              }
+            }
+            return $blocks;
           }
         ]
       ]
@@ -588,6 +595,10 @@ class BlockQL extends Config {
       $block['flags'] = @$meta['flags'];
       $block['tags'] = @$meta['tags'];
       $block['slug'] = @$meta['id'] ?? @$meta['acfName'];
+      // if (TemplateParts::isPartBlock($block['blockName'])) {
+      //   $partMeta = TemplateParts::getPartBlock($block['blockName']);
+      //   $block['templatePart'] = $partMeta['title'];
+      // }
 
       unset($block['attrs']);
       unset($block['innerContent']);

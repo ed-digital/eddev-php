@@ -85,6 +85,51 @@ class EDCore {
 
     include_once(__DIR__ . "/../integrations/load-integrations.php");
     ed_detect_integrations();
+
+    add_filter('plugins_url', function ($url, $path, $plugin) {
+      if (strpos($url, "wp-graphql/wp-graphql-acf/src") > 0) {
+        return preg_replace("/.+wp\-content\/themes\/[^\/]+/", ED()->themeURL, $url);
+      }
+      return $url;
+    }, 100, 3);
+
+    // Allow unused fragments
+    add_filter('graphql_validation_rules', function ($rules) {
+      return array_filter($rules, function ($rule) {
+        return ($rule instanceof GraphQL\Validator\Rules\NoUnusedFragments) == false;
+      });
+    }, 1, 1);
+
+    EDTemplates::init();
+    EDBlocks::init();
+    EDTrackers::init();
+
+    if ($this->isDev) {
+      // Automatically update the .env file with debugging info
+      $this->updateDevFiles();
+      EDSiteInfo::init();
+    }
+
+    add_action('rest_api_init', function () {
+      register_rest_route('ed/v1', '/handshake', [
+        'methods' => 'GET',
+        'callback' => '__return_true'
+      ]);
+    });
+
+    add_action('enqueue_graphiql_extension', function () {
+      /** Reconfigure WPGraphQL IDE to include preloaded fragments, and a compatible GraphQL endpoint */
+      wp_localize_script(
+        'wp-graphiql',
+        'wpGraphiQLSettings',
+        [
+          'nonce'             => wp_create_nonce('wp_rest'),
+          'graphqlEndpoint'   => graphql_get_endpoint_url(),
+          'avatarUrl'         => 0 !== get_current_user_id() ? get_avatar_url(get_current_user_id()) : null,
+          'externalFragments' => apply_filters('graphiql_external_fragments', \ED\FragmentLoader::getOptimized()),
+        ]
+      );
+    });
   }
 
   function injectServerlessEndpoint() {
@@ -242,68 +287,6 @@ class EDCore {
         exit;
       });
     }
-
-    add_filter('plugins_url', function ($url, $path, $plugin) {
-      if (strpos($url, "wp-graphql/wp-graphql-acf/src") > 0) {
-        return preg_replace("/.+wp\-content\/themes\/[^\/]+/", ED()->themeURL, $url);
-      }
-      return $url;
-    }, 100, 3);
-
-    // Allow unused fragments
-    add_filter('graphql_validation_rules', function ($rules) {
-      return array_filter($rules, function ($rule) {
-        return ($rule instanceof GraphQL\Validator\Rules\NoUnusedFragments) == false;
-      });
-    }, 1, 1);
-
-    EDTemplates::init();
-    EDBlocks::init();
-    EDTrackers::init();
-
-    if ($this->isDev) {
-      // Automatically update the .env file with debugging info
-      $this->updateDevFiles();
-      EDSiteInfo::init();
-    }
-
-    add_action('rest_api_init', function () {
-      register_rest_route('ed/v1', '/handshake', [
-        'methods' => 'GET',
-        'callback' => '__return_true'
-      ]);
-    });
-
-    add_action('enqueue_graphiql_extension', function () {
-      /** Reconfigure WPGraphQL IDE to include preloaded fragments, and a compatible GraphQL endpoint */
-      wp_localize_script(
-        'wp-graphiql',
-        'wpGraphiQLSettings',
-        [
-          'nonce'             => wp_create_nonce('wp_rest'),
-          'graphqlEndpoint'   => graphql_get_endpoint_url(),
-          'avatarUrl'         => 0 !== get_current_user_id() ? get_avatar_url(get_current_user_id()) : null,
-          'externalFragments' => apply_filters('graphiql_external_fragments', \ED\FragmentLoader::getOptimized()),
-        ]
-      );
-    });
-
-    // if (ED()->isDevProxy() && preg_match("/post(-new)?\.php/", $_SERVER['REQUEST_URI'])) {
-
-    //   // add_filter('script_loader_tag', function($tag, $handle, $src) {
-    //   //   if ($handle === 'react') {
-    //   //     // return "";
-    //   //     // return "<script type='module' src=\"/node_modules/.vite/deps/chunk-6NLOLHO3.js?v=fbc7fbaa\"></script><script type='module'>window.React = require_react();</script>";
-    //   //   } else if ($handle === 'react-dom') {
-    //   //     // return "";
-    //   //     // return "<script type='module' src=\"/global-react-dom.js\"></script>";
-    //   //   }
-    //   //   // } else {
-    //   //   //   return str_replace("<script ", "<script defer ", $tag);
-    //   //   // }
-    //   //   return $tag;
-    //   // }, 10, 3);
-    // }
   }
 
   function tagCoreBlocks($tag, $blocks) {
@@ -336,6 +319,39 @@ class EDCore {
   private function updateDevFiles() {
     $this->updateGraphQLConfigFile();
     $this->updateEnv();
+    $this->updateWPEFiles();
+  }
+
+  private function updateWPEFiles() {
+    $ignoreFiles = [$this->sitePath . "/.wpe-pull-ignore", $this->sitePath . "/.wpe-push-ignore"];
+    $ignorePatterns = [
+      "node_modules/",
+      ".git",
+      ".eddev/dev",
+      ".eddev/dev-spa",
+      ".eddev/prod-spa",
+      ".eddev/certs",
+      ".vscode/",
+      "/wp-content/themes/eddev/",
+      "/wp-content/themes/*.lock",
+      "/wp-content/themes/*.log",
+      ".yarn",
+      ".logs"
+    ];
+    foreach ($ignoreFiles as $file) {
+      $contents = @file_get_contents($file) ?? "";
+      $lines = preg_split("/\n+/", $contents, -1, PREG_SPLIT_NO_EMPTY);
+      foreach ($ignorePatterns as $pattern) {
+        if (in_array($pattern, $lines)) {
+          continue;
+        }
+        $lines[] = $pattern;
+      }
+      $contents = implode("\n", $lines);
+      if (@file_get_contents($file) !== $contents) {
+        file_put_contents($file, $contents);
+      }
+    }
   }
 
   private function updateGraphQLConfigFile() {

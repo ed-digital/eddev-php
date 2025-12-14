@@ -7,6 +7,7 @@ use EDThemeInfo;
 class TemplateParts {
 
   static $registeredTemplateParts = [];
+  static $templatePartBlockNames = [];
 
   static function setup() {
     add_action("acf/init", [__CLASS__, "registerACF"]);
@@ -24,6 +25,7 @@ class TemplateParts {
             "title" => $part['title'],
             "area" => $part['area'],
             "blockSlug" => $part['blockSlug'],
+            "blockAcfName" => $part['blockAcfName'],
             "defaultContent" => "<!-- wp:" . $part['blockAcfName'] . " -->
 <!-- /wp:" . $part['blockAcfName'] . " -->"
           ]);
@@ -34,6 +36,17 @@ class TemplateParts {
 
   static function registerTemplatePart($meta) {
     self::$registeredTemplateParts[$meta['name']] = $meta;
+    if (isset($meta['blockAcfName'])) {
+      self::$templatePartBlockNames[$meta['blockAcfName']] = $meta;
+    }
+  }
+
+  static function isPartBlock($blockName) {
+    return isset(self::$templatePartBlockNames[$blockName]);
+  }
+
+  static function getPartBlock($blockName) {
+    return isset(self::$templatePartBlockNames[$blockName]) ? self::$templatePartBlockNames[$blockName] : null;
   }
 
   protected static function createWpPartObject($meta) {
