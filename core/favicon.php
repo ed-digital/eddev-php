@@ -23,6 +23,7 @@ class EDFavicon {
 
   static function find($paths) {
     foreach ($paths as $path) {
+      if (!$path) continue;
       $path = preg_replace("/^\//", "", $path);
       if (file_exists(ED()->themePath . "/" . $path)) {
         return str_replace(ED()->sitePath, "", ED()->themePath) . "/" . $path;
