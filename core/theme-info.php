@@ -11,6 +11,7 @@ class EDThemeInfo {
     } else {
       $themeInfoFile = ED()->themePath . "/ed.dist.json";
       if (!file_exists($themeInfoFile)) return [
+        'version' => '0.0.0',
         'blocks' => [],
         'templates' => []
       ];

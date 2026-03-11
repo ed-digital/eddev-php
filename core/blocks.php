@@ -145,14 +145,18 @@ class EDBlocks {
 
     $themeInfo = EDThemeInfo::load();
 
+    $version = @$themeInfo['version'];
+
     foreach ($themeInfo['blocks'] as $block) {
       // Skip _editor and _core
       if (preg_match("/^_[^\/]+$/", $block['id'])) continue;
       $block['supports']['jsx'] = true;
       $block['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
       $block['use_post_meta'] = isset($block['postmeta']);
-      $block['acf_block_version'] = 3;
-      $block['api_version'] = 3;
+      if ($version) {
+        $block['acf_block_version'] = 3;
+        $block['api_version'] = 3;
+      }
       $block['validate'] = true;
       $block['styles'] = isset($block['blockStyles']) ? $block['blockStyles'] : null;
       acf_register_block_type($block);
