@@ -7,6 +7,7 @@ class EDWPHacks {
     self::disable_emojis();
     self::disable_xml_rpc();
     self::disable_user_enum();
+    self::disable_admin_menu_editor_modules();
   }
 
   static function disable_xml_rpc() {
@@ -132,5 +133,11 @@ class EDWPHacks {
       }
       return $public_query_vars;
     });
+  }
+
+  static function disable_admin_menu_editor_modules() {
+    add_action('add_meta_boxes', function () {
+      remove_meta_box('ame-cpe-content-permissions', null, 'advanced');
+    }, 1000);
   }
 }

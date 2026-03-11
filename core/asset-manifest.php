@@ -87,7 +87,7 @@ class AssetManifest {
     foreach ($assets as $asset) {
       if ($asset['type'] == 'style') {
         $output[] = '<link rel="stylesheet" type="text/css" media="all" href="' . $asset['file'] . '">';
-      } else {
+      } else if ($asset['type'] == 'script') {
         $output[] = '<link rel="preload" crossOrigin="anonymous" href="' . $asset['file'] . '" ' . ($asset['type'] ? 'as="' . $asset['type'] . '"' : '') . '/>';
       }
     }
@@ -128,6 +128,28 @@ class AssetManifest {
     foreach ($assets as $asset) {
       if ($asset['type'] === 'script') {
         return $asset['file'];
+      }
+    }
+  }
+
+  static function printScripts() {
+    if (self::$ignore) return '';
+    $assets = self::$assets;
+
+    foreach ($assets as $asset) {
+      if ($asset['type'] == 'script') {
+        echo '<link rel="preload" crossOrigin="anonymous" href="' . $asset['file'] . '" ' . ($asset['type'] ? 'as="' . $asset['type'] . '"' : '') . '/>';
+      }
+    }
+  }
+
+  static function printStyles() {
+    if (self::$ignore) return '';
+    $assets = self::$assets;
+
+    foreach ($assets as $asset) {
+      if ($asset['type'] == 'style') {
+        echo '<link rel="stylesheet" type="text/css" media="all" href="' . $asset['file'] . '">';
       }
     }
   }

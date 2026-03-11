@@ -20,6 +20,15 @@ class EDCore {
     EDCore::$instance = new EDCore();
   }
 
+  static function getVersion() {
+    $packageFile = __DIR__ . "/../package.json";
+    if (file_exists($packageFile)) {
+      $package = json_decode(file_get_contents($packageFile), true);
+      return $package['version'] ?? "1.0.0";
+    }
+    return "1.0.0";
+  }
+
   private function __construct() {
     EDCore::$instance = $this;
     $this->themeURL = get_stylesheet_directory_uri();

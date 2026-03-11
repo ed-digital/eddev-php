@@ -151,7 +151,8 @@ class EDBlocks {
       $block['supports']['jsx'] = true;
       $block['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
       $block['use_post_meta'] = isset($block['postmeta']);
-      $block['acf_block_version'] = 2;
+      $block['acf_block_version'] = 3;
+      $block['api_version'] = 3;
       $block['validate'] = true;
       $block['styles'] = isset($block['blockStyles']) ? $block['blockStyles'] : null;
       acf_register_block_type($block);
@@ -203,17 +204,13 @@ class EDBlocks {
     }
   }
 
-  // This function is used for block previews only
+  // This function is used for block editor previews only
   // It should produce the same props that the frontend receives
   static function renderBlockJSON($args) {
     $block = self::$blocks[$args['name']];
 
-    // $blockData = json_parse($_POST['block']);
-    // BlockQLRoot::setContext($args);
     $fields = acf_get_block_fields($args);
     foreach ($fields as $field) {
-      // $args['data'][$field['name']] = $args['data'][$field['key']];
-      // unset($args['data'][$field['key']]);
       $args['data']["_{$field['name']}"] = $field['key'];
     }
 
@@ -222,6 +219,11 @@ class EDBlocks {
       'name' => $args['name'],
       'data' => $args['data']
     ], 0);
+
+    $result = is_array($result) ? $result : [];
+
+    // Add the client ID to the result, so our JS code can pick it up in the editor.
+    $result['__clientId'] = preg_replace("/^block_/", "", $args['id']);
 
     echo json_encode($result);
   }

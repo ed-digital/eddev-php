@@ -29,6 +29,9 @@ class EDSiteInfo {
 
     graphql_init();
 
+    // eddev-php version
+    $info['eddevPhpVersion'] = EDCore::getVersion();
+
     // Get post types
     $types = \WPGraphQL::get_allowed_post_types('objects');
     foreach ($types as $type) {
