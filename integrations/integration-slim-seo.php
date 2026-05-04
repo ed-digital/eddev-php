@@ -32,12 +32,16 @@ class SlimSEOIntegration {
             "args" => [
               "fallbackToDefault" => [
                 "type" => "Boolean",
-                "defaultValue" => true,
+                "defaultValue" => false,
                 "description" => "Whether to fall back to the default image if no per-post image is set.",
               ],
             ],
-            "resolve" => function ($meta) {
+            "resolve" => function ($meta, $args) {
               $image = $meta->getOpenGraphImage();
+
+              if ($image && $image['isFallback'] && !$args['fallbackToDefault']) {
+                return null;
+              }
 
               if ($image && isset($image['url'])) {
                 return $image['url'];
@@ -50,12 +54,16 @@ class SlimSEOIntegration {
             "args" => [
               "fallbackToDefault" => [
                 "type" => "Boolean",
-                "defaultValue" => true,
+                "defaultValue" => false,
                 "description" => "Whether to fall back to the default image if no per-post image is set.",
               ],
             ],
-            "resolve" => function ($meta) {
+            "resolve" => function ($meta, $args) {
               $image = $meta->getOpenGraphImage();
+
+              if ($image && $image['isFallback'] && !$args['fallbackToDefault']) {
+                return null;
+              }
 
               if (isset($image['image']['id'])) {
                 return new WPGraphQL\Model\Post(get_post($image['image']['id']));
@@ -217,7 +225,7 @@ class SlimSEOPostMeta {
 
     $image_obj = new \SlimSEO\MetaTags\Image($meta_key);
     $image = [];
-    $attachmentId = 0;
+    $isFalback = false;
 
     // 1. Per-post override.
     if (isset($this->meta[$meta_key]) && $this->meta[$meta_key] !== '') {
@@ -226,17 +234,17 @@ class SlimSEOPostMeta {
       );
     }
 
-    // 2. Per-post-type setting.                                                                                                                      
+    // 2. Per-post-type setting.                    
     if (empty($image) && ! empty($this->option[$this->post->post_type][$meta_key])) {
       $image = $image_obj->get_data_from_url(
         $this->renderIfTemplate($this->option[$this->post->post_type][$meta_key])
       );
     }
 
-    // 3. Featured image / first image in content.                                                                                                  
+    // 3. Featured image / first image in content.
     if (empty($image)) {
       $candidates = \SlimSEO\Helpers\Images::get_post_images($this->post);
-      if (! empty($candidates)) {
+      if (!empty($candidates)) {
         $first = reset($candidates);
         $image = is_numeric($first)
           ? $this->imageDataFromAttachment((int) $first, $image_obj)
@@ -244,21 +252,21 @@ class SlimSEOPostMeta {
       }
     }
 
-    // 4. Site-wide default.                                                                                                                          
+    // 4. Site-wide default.
     if (empty($image) && ! empty($this->option[$default_option_key])) {
       $image = $image_obj->get_data_from_url(
         $this->renderIfTemplate($this->option[$default_option_key])
       );
+      $isFalback = true;
     }
 
     $url = $image['src'] ?? null;
     $url = apply_filters($filter, $url);
 
-    Console::log($image);
-
     return [
       "url" => $url,
       "image" => $image,
+      "isFallback" => $isFalback,
     ];
   }
 
