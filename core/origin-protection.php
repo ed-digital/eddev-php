@@ -61,13 +61,13 @@ class OriginProtection {
     // Allow public files that should always be accessible
     $requestUri = $_SERVER['REQUEST_URI'] ?? '';
     $requestPath = parse_url($requestUri, PHP_URL_PATH);
-    
+
     // List of public files that should bypass authentication
     $publicFiles = ['/robots.txt', '/favicon.ico'];
     if (in_array($requestPath, $publicFiles)) {
       return;
     }
-    
+
     // Allow sitemap files (sitemap.xml, sitemap_index.xml, etc.)
     if (preg_match('/^\/sitemap.*\.xml$/i', $requestPath)) {
       return;

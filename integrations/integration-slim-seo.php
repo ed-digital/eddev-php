@@ -12,6 +12,80 @@ class SlimSEOIntegration {
       }
     });
 
+    add_action('graphql_register_types', function () {
+      register_graphql_object_type("SlimSEOPostMeta", [
+        "fields" => [
+          "metaTitle" => [
+            "type" => "String",
+            "resolve" => function ($meta) {
+              return $meta->getMetaTitle();
+            }
+          ],
+          "metaDescription" => [
+            "type" => "String",
+            "resolve" => function ($meta) {
+              return $meta->getMetaDescription();
+            }
+          ],
+          "openGraphImageUrl" => [
+            "type" => "String",
+            "args" => [
+              "fallbackToDefault" => [
+                "type" => "Boolean",
+                "defaultValue" => true,
+                "description" => "Whether to fall back to the default image if no per-post image is set.",
+              ],
+            ],
+            "resolve" => function ($meta) {
+              $image = $meta->getOpenGraphImage();
+
+              if ($image && isset($image['url'])) {
+                return $image['url'];
+              }
+              return null;
+            }
+          ],
+          "openGraphImage" => [
+            "type" => "MediaItem",
+            "args" => [
+              "fallbackToDefault" => [
+                "type" => "Boolean",
+                "defaultValue" => true,
+                "description" => "Whether to fall back to the default image if no per-post image is set.",
+              ],
+            ],
+            "resolve" => function ($meta) {
+              $image = $meta->getOpenGraphImage();
+
+              if (isset($image['image']['id'])) {
+                return new WPGraphQL\Model\Post(get_post($image['image']['id']));
+              }
+              return null;
+            }
+          ],
+          "canonicalUrl" => [
+            "type" => "String",
+            "resolve" => function ($meta) {
+              return $meta->getCanonicalURL();
+            }
+          ],
+          "hiddenFromSearch" => [
+            "type" => "Boolean",
+            "resolve" => function ($meta) {
+              return $meta->getIsHidden();
+            }
+          ]
+        ]
+      ]);
+
+      register_graphql_field("ContentNode", "slimSEOMeta", [
+        "type" => "SlimSEOPostMeta",
+        "resolve" => function ($post) {
+          return new SlimSEOPostMeta($post->ID);
+        }
+      ]);
+    });
+
     add_filter('slim_seo_post_content', function ($content, $post) {
       $excerpt = get_the_excerpt($post);
       return $excerpt;
@@ -71,3 +145,135 @@ class SlimSEOIntegration {
 }
 
 SlimSEOIntegration::init();
+
+class SlimSEOPostMeta {
+  public $id;
+
+  private $post;
+  private $meta;
+  private $option;
+
+  public function __construct($id) {
+    $this->id     = (int) $id;
+    $this->post   = get_post($this->id);
+    $this->meta   = $this->post ? (get_post_meta($this->id, 'slim_seo', true) ?: []) : [];
+    $this->option = get_option('slim_seo', []) ?: [];
+  }
+
+  public function getMetaTitle() {
+    if (! $this->post) {
+      return '';
+    }
+    $title = new \SlimSEO\MetaTags\Title();
+    return $title->get_rendered_singular_value($this->id);
+  }
+
+  public function getMetaDescription() {
+    if (! $this->post) {
+      return '';
+    }
+    $description = new \SlimSEO\MetaTags\Description();
+    return $description->get_rendered_singular_value($this->id);
+  }
+
+  public function getOpenGraphImage() {
+    return $this->resolveImage('facebook_image', 'default_facebook_image', 'slim_seo_open_graph_image');
+  }
+
+  public function getTwitterImage() {
+    return $this->resolveImage('twitter_image', 'default_twitter_image', 'slim_seo_twitter_card_image');
+  }
+
+  public function getCanonicalURL() {
+    if (! $this->post) {
+      return null;
+    }
+
+    $url = ! empty($this->meta['canonical'])
+      ? $this->meta['canonical']
+      : (string) get_permalink($this->post);
+
+    $url = (string) apply_filters('slim_seo_canonical_url', $url, $this->id);
+    $url = \SlimSEO\MetaTags\Helper::render($url, $this->id);
+
+    return ($url && filter_var($url, FILTER_VALIDATE_URL)) ? $url : null;
+  }
+
+  public function getIsHidden() {
+    if (! $this->post) {
+      return false;
+    }
+    // Robots' constructor needs a CanonicalUrl, but get_singular_value() doesn't use it.
+    $robots = new \SlimSEO\MetaTags\Robots(new \SlimSEO\MetaTags\CanonicalUrl());
+    $value  = $robots->get_singular_value($this->id);
+    return (bool) apply_filters('slim_seo_robots_index', ! $value, $this->id) ? false : true;
+    // Note: slim_seo_robots_index returns the "should index" value; invert for "is hidden".                                                          
+  }
+
+  private function resolveImage($meta_key, $default_option_key, $filter) {
+    if (! $this->post) {
+      return null;
+    }
+
+    $image_obj = new \SlimSEO\MetaTags\Image($meta_key);
+    $image = [];
+    $attachmentId = 0;
+
+    // 1. Per-post override.
+    if (isset($this->meta[$meta_key]) && $this->meta[$meta_key] !== '') {
+      $image = $image_obj->get_data_from_url(
+        $this->renderIfTemplate($this->meta[$meta_key])
+      );
+    }
+
+    // 2. Per-post-type setting.                                                                                                                      
+    if (empty($image) && ! empty($this->option[$this->post->post_type][$meta_key])) {
+      $image = $image_obj->get_data_from_url(
+        $this->renderIfTemplate($this->option[$this->post->post_type][$meta_key])
+      );
+    }
+
+    // 3. Featured image / first image in content.                                                                                                  
+    if (empty($image)) {
+      $candidates = \SlimSEO\Helpers\Images::get_post_images($this->post);
+      if (! empty($candidates)) {
+        $first = reset($candidates);
+        $image = is_numeric($first)
+          ? $this->imageDataFromAttachment((int) $first, $image_obj)
+          : $image_obj->get_data_from_url($first);
+      }
+    }
+
+    // 4. Site-wide default.                                                                                                                          
+    if (empty($image) && ! empty($this->option[$default_option_key])) {
+      $image = $image_obj->get_data_from_url(
+        $this->renderIfTemplate($this->option[$default_option_key])
+      );
+    }
+
+    $url = $image['src'] ?? null;
+    $url = apply_filters($filter, $url);
+
+    Console::log($image);
+
+    return [
+      "url" => $url,
+      "image" => $image,
+    ];
+  }
+
+  private function imageDataFromAttachment($id, \SlimSEO\MetaTags\Image $image_obj) {
+    $src = wp_get_attachment_image_src($id, 'full');
+    if (! $src) {
+      return [];
+    }
+    return $image_obj->get_data_from_url($src[0]);
+  }
+
+  private function renderIfTemplate($value) {
+    if (! is_string($value) || ! filter_var($value, FILTER_VALIDATE_URL)) {
+      return \SlimSEO\MetaTags\Helper::render((string) $value, $this->id);
+    }
+    return $value;
+  }
+}
