@@ -175,23 +175,54 @@ class EDCore {
     return $this->config;
   }
 
-  function matchHost($pattern) {
-    $hostname = preg_replace("/:[0-9]+/", "", $_SERVER['HTTP_HOST']);
-    if (function_exists('fnmatch')) {
-      return fnmatch($pattern, $hostname);
-    } else {
-      return $pattern === $hostname;
+  function normalizeHost($host) {
+    $host = strtolower(trim($host));
+    $host = preg_replace("/^https?:\/\//", "", $host);
+    $host = preg_replace("/\/.*$/", "", $host);
+    $host = preg_replace("/:[0-9]+$/", "", $host);
+    return $host;
+  }
+
+  function hostMatchScore($pattern, $hostname = null) {
+    $pattern = $this->normalizeHost($pattern);
+    $hostname = $hostname ? $this->normalizeHost($hostname) : $this->normalizeHost($_SERVER['HTTP_HOST'] ?? '');
+
+    if ($pattern === $hostname) {
+      return 1000000 + strlen($pattern);
     }
+    if ($pattern === "*") {
+      return 0;
+    }
+    if (strpos($pattern, "*") === false) {
+      return null;
+    }
+
+    $matches = function_exists('fnmatch')
+      ? fnmatch($pattern, $hostname)
+      : preg_match("/^" . str_replace('\*', '.*', preg_quote($pattern, "/")) . "$/i", $hostname);
+
+    if ($matches) {
+      return strlen(str_replace("*", "", $pattern));
+    }
+
+    return null;
+  }
+
+  function matchHost($pattern) {
+    return $this->hostMatchScore($pattern) !== null;
   }
 
   function getCacheConfig($key = null) {
     $config = $this->getConfig();
     $value = null;
     if (isset($config['cache'])) {
+      $hostname = $this->normalizeHost($_SERVER['HTTP_HOST'] ?? '');
+      $bestScore = null;
       foreach ($config['cache'] as $host => $cacheConfig) {
-        if ($this->matchHost($host)) {
+        $score = $this->hostMatchScore($host, $hostname);
+        if ($score !== null && ($bestScore === null || $score > $bestScore)) {
           $value = $cacheConfig;
-          break;
+          $bestScore = $score;
         }
       }
     }
