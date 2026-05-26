@@ -40,7 +40,7 @@ class EDCore {
     include_once(__dir__ . "/../lib/simple-custom-post-order/simple-custom-post-order.php");
 
     if ((bool)$this->readEnvValue("DEBUG_FULL_SECURITY") === false) {
-      $this->isDev = preg_match("/(localhost|127|\.local|\.dev)/", get_site_url()) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
+      $this->isDev = $this->isLocalDev();
     }
 
     if (!defined('WPGRAPHQL_PLUGIN_URL')) {
@@ -251,7 +251,7 @@ class EDCore {
   }
 
   function isLocalDev() {
-    return preg_match("/(\.local|localhost|127\.0\.0\.1)/", $_SERVER['HTTP_HOST']);
+    return preg_match("/(localhost|127|\.local|\.dev|dev\.)/", $_SERVER['HTTP_HOST']) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
   }
 
   function addCustomRoute($pattern, $args) {
@@ -261,7 +261,10 @@ class EDCore {
   function getServerlessEndpoint() {
     $value = "";
     if ($this->isLocalDev()) {
-      $value = $this->readEnvValue("DEBUG_SERVERLESS_ENDPOINT");
+      $localServer = trim($this->readEnvValue("SITE_URL"), "/");
+      if ($localServer) {
+        $value = $localServer . ":8080";
+      }
     }
     if ($value) {
       return $value;
@@ -439,7 +442,7 @@ class EDCore {
 
     // Values to set
     $siteURL = $this->siteURL;
-    if (strpos($siteURL, ".local") > 0) {
+    if ($this->isLocalDev()) {
       // Prefer http when using local! Avoids issues with SSL
       $siteURL = str_replace("http:", "https:", $siteURL);
     }
