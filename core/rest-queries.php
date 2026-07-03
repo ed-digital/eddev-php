@@ -10,7 +10,12 @@ class QueryHandler {
   }
 
   static function _rest_api_init() {
-    define('DOING_AJAX', true);
+    // Only mark the request as AJAX when PHP is actually serving a REST request.
+    // rest_api_init also fires during block-editor page loads (REST preloading),
+    // where defining DOING_AJAX breaks plugins that skip asset enqueues on AJAX.
+    if (!defined('DOING_AJAX') && function_exists('wp_is_serving_rest_request') && wp_is_serving_rest_request()) {
+      define('DOING_AJAX', true);
+    }
     register_rest_route('ed/v1', '/query/(?P<queryName>[A-Z0-9\/\_\-]+)', [
       'methods' => 'GET',
       'callback' => ['QueryHandler', 'handleQueryRequest']
