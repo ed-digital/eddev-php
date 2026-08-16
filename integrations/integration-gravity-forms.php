@@ -128,7 +128,7 @@ class EDGravityForms {
       "feeds"
     ];
 
-    if (is_array($form['fields'])) {
+    if (isset($form['fields']) && is_array($form['fields'])) {
       foreach ($form['fields'] as &$field) {
         if ($field->type === "captcha") {
           $field->captchaSiteKey = $field->get_site_key();

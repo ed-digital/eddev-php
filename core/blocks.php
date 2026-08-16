@@ -151,6 +151,11 @@ class EDBlocks {
       // Skip _editor and _core
       if (preg_match("/^_[^\/]+$/", $block['id'])) continue;
       $block['supports']['jsx'] = true;
+      $block['supports']['className'] = false;
+      $block['supports']['customClassName'] = false;
+      $block['supports']['style'] = false;
+      // $block['supports']['customCSS'] = false;
+      // ed_dump($block);
       $block['render_callback'] = ['EDBlocks', 'renderBlockJSON'];
       $block['use_post_meta'] = isset($block['postmeta']);
       if ($version) {
@@ -630,7 +635,8 @@ class BlockQL extends Config {
     'exclude' => null,
     'limit' => null,
     'maxDepth' => null,
-    'flattenExcluded' => false
+    'flattenExcluded' => false,
+    'includeHidden' => false,
   ]) {
 
     $args = [
@@ -638,12 +644,18 @@ class BlockQL extends Config {
       'exclude' => isset($args['exclude']) ? $args['exclude'] : null,
       'limit' => isset($args['limit']) ? $args['limit'] : null,
       'maxDepth' => isset($args['maxDepth']) ? $args['maxDepth'] : null,
-      'flattenExcluded' => isset($args['flattenExcluded']) ? $args['flattenExcluded'] : false
+      'flattenExcluded' => isset($args['flattenExcluded']) ? $args['flattenExcluded'] : false,
+      'includeHidden' => isset($args['includeHidden']) ? $args['includeHidden'] : false
     ];
 
     // Expand pattern blocks
     $expanded = [];
     foreach ($blocks as $block) {
+      $metadata = isset($block['attrs']['metadata']) ? $block['attrs']['metadata'] : [];
+      // Exclude 'hidden' blocks
+      if (isset($metadata['blockVisibility']) && $metadata['blockVisibility'] === false) {
+        continue;
+      }
       if ($block['blockName'] === 'core/block') {
         $patternId = $block['attrs']['ref'];
         $post = get_post($patternId);
@@ -737,7 +749,8 @@ class BlockQL extends Config {
             'exclude' => $args['exclude'],
             'limit' => $limit,
             'maxDepth' => $args['maxDepth'] - 1,
-            'flattenExcluded' => $included ? false : $args['flattenExcluded']
+            'flattenExcluded' => $included ? false : $args['flattenExcluded'],
+            'includeHidden' => $args['includeHidden']
           ]);
           foreach ($children as $block) {
             $blocks[] = $block;
@@ -753,7 +766,8 @@ class BlockQL extends Config {
             'include' => $args['include'],
             'exclude' => $args['exclude'],
             'limit' => $limit,
-            'maxDepth' => $args['maxDepth'] - 1
+            'maxDepth' => $args['maxDepth'] - 1,
+            'includeHidden' => $args['includeHidden']
           ]);
         } else {
           unset($block['innerBlocks']);
