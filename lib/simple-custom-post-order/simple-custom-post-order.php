@@ -269,30 +269,77 @@ class ED_SCPO_Engine {
 		$id_arr = array();
 		foreach ($data as $key => $values) {
 			foreach ($values as $position => $id) {
-				$id_arr[] = $id;
+				$id = intval($id);
+				if ($id > 0 && ! in_array($id, $id_arr, true)) {
+					$id_arr[] = $id;
+				}
 			}
 		}
 
-		$menu_order_arr = array();
-		foreach ($id_arr as $key => $id) {
-			$id = intval($id); // Nettoyage variable ID
-			$results = $wpdb->get_results($wpdb->prepare("SELECT term_order FROM $wpdb->terms WHERE term_id = %d", $id)); // Passage en requette préparée
-			foreach ($results as $result) {
-				$menu_order_arr[] = $result->term_order;
-			}
+		if (empty($id_arr)) {
+			return false;
 		}
-		sort($menu_order_arr);
 
-		foreach ($data as $key => $values) {
-			foreach ($values as $position => $id) {
-				$id = intval($id); // Nettoyage variable ID
+		$placeholders = implode(',', array_fill(0, count($id_arr), '%d'));
+		$taxonomies = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT taxonomy FROM $wpdb->term_taxonomy WHERE term_id IN ($placeholders)",
+				$id_arr
+			)
+		);
+
+		$tags = $this->get_scporder_options_tags();
+		$taxonomies = array_values(array_intersect($taxonomies, $tags));
+
+		if (empty($taxonomies)) {
+			return false;
+		}
+
+		foreach ($taxonomies as $taxonomy) {
+			$term_ids = $wpdb->get_col(
+				$wpdb->prepare(
+					"
+					SELECT terms.term_id
+					FROM $wpdb->terms AS terms
+					INNER JOIN $wpdb->term_taxonomy AS term_taxonomy ON ( terms.term_id = term_taxonomy.term_id )
+					WHERE term_taxonomy.taxonomy = %s
+					ORDER BY terms.term_order ASC, terms.term_id ASC
+					",
+					$taxonomy
+				)
+			);
+
+			$term_ids = array_map('intval', $term_ids);
+			$submitted_ids = array_values(array_intersect($id_arr, $term_ids));
+
+			if (empty($submitted_ids)) {
+				continue;
+			}
+
+			$positions = array();
+			foreach ($submitted_ids as $id) {
+				$position = array_search($id, $term_ids, true);
+				if ($position !== false) {
+					$positions[] = $position;
+				}
+			}
+
+			if (empty($positions)) {
+				continue;
+			}
+
+			$insert_at = min($positions);
+			$remaining_ids = array_values(array_diff($term_ids, $submitted_ids));
+			array_splice($remaining_ids, $insert_at, 0, $submitted_ids);
+
+			foreach ($remaining_ids as $position => $id) {
 				$wpdb->update(
 					$wpdb->terms,
-					array('term_order' => $menu_order_arr[$position]),
+					array('term_order' => $position + 1),
 					array('term_id' => $id),
 					array('%d'),
 					array('%d')
-				); // Passage en requette préparée
+				);
 			}
 		}
 
