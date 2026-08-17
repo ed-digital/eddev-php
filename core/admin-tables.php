@@ -44,6 +44,15 @@ class EDAdminTables {
 				defaultSort: $object->admin_sort ?? $object->adminSort ?? null
 			);
 		}
+
+		$taxonomies = get_taxonomies([], 'objects');
+		foreach ($taxonomies as $name => $object) {
+			if (@($object->sortable || $object->admin_sortable || $object->adminSortable)) {
+				add_filter('edit_' . $name . '_per_page', function () {
+					return 9999;
+				}, 10, 0);
+			}
+		}
 	}
 
 	/**
