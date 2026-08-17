@@ -251,7 +251,7 @@ class EDCore {
   }
 
   function isLocalDev() {
-    return preg_match("/(localhost|127|\.local|\.dev|dev\.)/", $_SERVER['HTTP_HOST']) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
+    return preg_match("/(localhost|127|\.local|dev\.)/", $_SERVER['HTTP_HOST']) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
   }
 
   function addCustomRoute($pattern, $args) {
