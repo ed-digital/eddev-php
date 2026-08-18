@@ -685,6 +685,9 @@ class BlockQL extends Config {
 
     // Filter out empty blocks
     $blocks = array_filter($blocks, function ($block) {
+      if ($block['blockName'] === "core/paragraph" && preg_match("/^\s*$/", strip_tags($block['innerHTML'], ["img"]))) {
+        return false;
+      }
       if (!$block['blockName'] && preg_match("/^\s*$/", $block['innerHTML'])) {
         // Empty block
         return false;
