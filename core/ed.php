@@ -185,7 +185,7 @@ class EDCore {
 
   function hostMatchScore($pattern, $hostname = null) {
     $pattern = $this->normalizeHost($pattern);
-    $hostname = $hostname ? $this->normalizeHost($hostname) : $this->normalizeHost($_SERVER['HTTP_HOST'] ?? '');
+    $hostname = $hostname ? $this->normalizeHost($hostname) : $this->normalizeHost(@$_SERVER['HTTP_HOST'] ?? '');
 
     if ($pattern === $hostname) {
       return 1000000 + strlen($pattern);
@@ -216,7 +216,7 @@ class EDCore {
     $config = $this->getConfig();
     $value = null;
     if (isset($config['cache'])) {
-      $hostname = $this->normalizeHost($_SERVER['HTTP_HOST'] ?? '');
+      $hostname = $this->normalizeHost(@$_SERVER['HTTP_HOST'] ?? '');
       $bestScore = null;
       foreach ($config['cache'] as $host => $cacheConfig) {
         $score = $this->hostMatchScore($host, $hostname);
@@ -251,7 +251,7 @@ class EDCore {
   }
 
   function isLocalDev() {
-    return preg_match("/(localhost|127|\.local|dev\.)/", $_SERVER['HTTP_HOST']) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
+    return preg_match("/(localhost|127|\.local|dev\.)/", @$_SERVER['HTTP_HOST']) || isset($_SERVER['HTTP_X_ED_DEV_PROXY']);
   }
 
   function addCustomRoute($pattern, $args) {
@@ -269,7 +269,7 @@ class EDCore {
     if ($value) {
       return $value;
     }
-    $hostname = $_SERVER['HTTP_HOST'];
+    $hostname = @$_SERVER['HTTP_HOST'];
     $config = $this->getConfig();
     if (@$config['serverless']['enabled'] && is_array($config['serverless']['endpoints'])) {
       $fallback = "";
