@@ -121,12 +121,19 @@ class EDContentExtractor {
     foreach ($this->elements as $i => $element) {
       if ($i !== 0) $result .= ' ';
       $result .= $element['text'];
-      if (strlen($result) > $maxLength) break;
+      if (mb_strlen($result) > $maxLength) break;
     }
-    if (strlen($result) > $maxLength) {
-      $result = substr($result, 0, $maxLength);
-      $result = substr($result, 0, strrpos($result, ' '));
-      $result .= '...';
+    if (mb_strlen($result) > $maxLength) {
+      $result = mb_substr($result, 0, $maxLength);
+      // Trim back to a word boundary, but only when one is close enough to the limit to
+      // be worth keeping. Scripts written without spaces (Japanese, Chinese, Thai…) have
+      // no boundary to find, and a lone Latin word early in otherwise spaceless text
+      // would otherwise throw away almost the whole excerpt.
+      $space = mb_strrpos($result, ' ');
+      if ($space !== false && $space > $maxLength / 2) {
+        $result = mb_substr($result, 0, $space);
+      }
+      $result = rtrim($result) . '...';
     }
     return $result;
   }
