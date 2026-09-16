@@ -78,7 +78,7 @@ class EDCore {
 
   function getCacheConfig() {
     $config = $this->getConfig();
-    $hostname = $_SERVER['HTTP_HOST'];
+    $hostname = $_SERVER['HTTP_HOST'] ?? '';
     if ($config['cache']) {
       if (@$config['cache'][$hostname]) return $config['cache'][$hostname];
       if (@$config['cache']["*"]) return $config['cache']["*"];
@@ -87,7 +87,7 @@ class EDCore {
   }
 
   function isLocalDev() {
-    return preg_match("/(\.local|localhost|127\.0\.0\.1)/", $_SERVER['HTTP_HOST']);
+    return preg_match("/(\.local|localhost|127\.0\.0\.1)/", $_SERVER['HTTP_HOST'] ?? '');
   }
 
   function addCustomRoute($pattern, $args) {
@@ -98,7 +98,7 @@ class EDCore {
     if ($this->isLocalDev()) {
       return $this->readEnvValue("DEBUG_SERVERLESS_ENDPOINT");
     } else {
-      $hostname = $_SERVER['HTTP_HOST'];
+      $hostname = $_SERVER['HTTP_HOST'] ?? '';
       $config = $this->getConfig();
       if (@$config['serverless']['enabled'] && is_array($config['serverless']['endpoints'])) {
         $fallback = "";
