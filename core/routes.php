@@ -21,8 +21,8 @@
     static function registerRoute($pattern, $args) {
       $key = md5($pattern);
       $uri = 'index.php?custom_route='.$key;
-      if (@$args['queryVars']) {
-        foreach (@$args['queryVars'] as $i => $var) {
+      if (!empty($args['queryVars'])) {
+        foreach ($args['queryVars'] as $i => $var) {
           if (preg_match("/^\\$[0-9]+/", $var)) {
             $matchIndex = substr($var, 1);
             $uri .= '&match_'.$matchIndex.'=$matches['.$matchIndex.']';
@@ -45,8 +45,8 @@
     static function getCustomRouteQueryVars() {
       $args = @self::$routes[get_query_var('custom_route')];
       $vars = [];
-      if ($args && @$args['queryVars']) {
-        foreach (@$args['queryVars'] as $key => $var) {
+      if ($args && !empty($args['queryVars'])) {
+        foreach ($args['queryVars'] as $key => $var) {
           if (preg_match("/^\\$[0-9]+/", $var)) {
             $matchIndex = substr($var, 1);
             $vars[$key] = get_query_var('match_'.$matchIndex);
@@ -66,7 +66,7 @@
       $route = get_query_var('custom_route');
       if ($route) {
         $args = self::$routes[$route];
-        if ($args['template']) {
+        if (!empty($args['template'])) {
           return ED()->themePath."/".$args['template'];
         }
       }
@@ -77,9 +77,9 @@
       $route = get_query_var('custom_route');
       if ($route) {
         $args = self::$routes[$route];
-        if (is_string($args['title'])) {
+        if (!empty($args['title']) && is_string($args['title'])) {
           return $args['title'];
-        } else if (is_callable($args['title'])) {
+        } else if (!empty($args['title']) && is_callable($args['title'])) {
           return $args['title'](self::getCustomRouteQueryVars());
         }
       }
@@ -90,9 +90,9 @@
       $route = get_query_var('custom_route');
       if ($route) {
         $args = self::$routes[$route];
-        if (is_string($args['ograph'])) {
+        if (!empty($args['ograph']) && is_string($args['ograph'])) {
           return $args['ograph'];
-        } else if (is_callable($args['ograph'])) {
+        } else if (!empty($args['ograph']) && is_callable($args['ograph'])) {
           return $args['ograph'](self::getCustomRouteQueryVars(), $presentation);
         }
       }

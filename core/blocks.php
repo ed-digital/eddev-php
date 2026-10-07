@@ -386,7 +386,7 @@
 
       // If caching is support by this block (via Supports memo, then calculate the cache key and look for a stored value)
       if (@$meta['canCache']) {
-        $cacheKey = md5(@$contents."_".$attributes['name']."_".json_encode($attributes['data']). "_" . json_encode($attributes['inline']));
+        $cacheKey = md5(@$contents."_".($attributes['name'] ?? '')."_".json_encode($attributes['data'] ?? null). "_" . json_encode($attributes['inline'] ?? null));
       }
       if ($cacheKey) {
         $cached = get_transient($cacheKey);
@@ -399,7 +399,7 @@
 
       QueryMonitor::push($queryFile, "block");
       $params = EDTemplates::getQueryParams();
-      if (@!$attributes['id']) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
+      if (empty($attributes['id'])) $attributes['id'] = 'block_'.md5((string)rand(0, 10000000));
       BlockQLRoot::setContext($attributes);
       $result = graphql([
         'query' => $contents . FragmentLoader::getAll(),
