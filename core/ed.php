@@ -171,9 +171,6 @@ class EDCore {
     add_action('wp_body_open', [$this, 'trackingBody']);
     add_action('wp_footer', [$this, 'trackingFooter']);
 
-    EDTemplates::init();
-    EDBlocks::init();
-
     if ($this->isDev) {
       // Automatically update the .env file with debugging info
       $this->updateDevFiles();
@@ -193,11 +190,39 @@ class EDCore {
     });
 
     add_action('enqueue_block_editor_assets', function () {
+      wp_enqueue_script(
+        'theme_admin_js',
+        $this->themeURL . '/dist/admin/main.admin.js',
+        get_current_screen()->is_block_editor() ? ['wp-blocks', 'wp-editor', 'wp-edit-post', 'wp-dom-ready', 'react', 'acf-blocks', 'acf'] : ['acf', 'react', 'react-dom', 'wp-hooks'],
+        filemtime(ED()->themePath . @$style)
+      );
+      $style = "/dist/admin/main.css";
+      if (file_exists(ED()->themePath . $style)) {
+        wp_enqueue_style('theme_admin_css', ED()->themeURL . $style, [], filemtime(ED()->themePath . $style));
+      }
       add_action('admin_print_scripts', function () {
         $data = EDTemplates::getDataForApp();
         echo "<script>window.__ED_APP_DATA = " . json_encode($data) . "</script>";
       });
     });
+
+    // Downgrade to v1 for blocks
+    add_filter('acf/blocks/default_block_version', function ($version, $settings, $context) {
+      return $context === 'php' ? 1 : $version;
+    }, 10, 3);
+
+    // The editor canvas is always iframed on WP 7.1+, and admin_enqueue_scripts styles
+    // don't reach it. enqueue_block_assets styles are loaded inside the iframe.
+    add_action('enqueue_block_assets', function () {
+      if (!is_admin()) return;
+      $style = "/dist/admin/main.css";
+      if (file_exists(ED()->themePath . $style)) {
+        wp_enqueue_style('theme_admin_css_iframe', ED()->themeURL . $style, [], filemtime(ED()->themePath . $style));
+      }
+    });
+
+    EDTemplates::init();
+    EDBlocks::init();
   }
 
   function tagCoreBlocks($tag, $blocks) {
