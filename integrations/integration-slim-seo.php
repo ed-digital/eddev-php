@@ -7,9 +7,21 @@ class SlimSEOIntegration {
       $plugin->disable('notifications');
       $plugin->disable('feed');
       $plugin->disable('settings_term');
+      $plugin->disable('admin_columns_post');
+      $plugin->disable('admin_columns_term');
       if (!is_admin()) {
         $plugin->disable('code');
       }
+    });
+
+    // Redirect adds its column separately from Slim SEO's admin-column services.
+    add_action('current_screen', function ($screen) {
+      if ($screen->base !== 'edit' || !$screen->post_type) return;
+
+      add_filter("manage_{$screen->post_type}_posts_columns", function ($columns) {
+        unset($columns['redirect']);
+        return $columns;
+      }, PHP_INT_MAX);
     });
 
     add_action('graphql_register_types', function () {
