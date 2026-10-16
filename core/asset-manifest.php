@@ -113,7 +113,7 @@ class AssetManifest {
     $assets = self::$assets;
 
     foreach ($assets as $asset) {
-      if ($asset['type'] === 'script') {
+      if ($asset['type'] === 'script' && $asset['rel'] === 'main') {
         return '<script defer type="module" src="' . $asset['file'] . '"></script>';
       }
     }
@@ -126,7 +126,7 @@ class AssetManifest {
     $assets = self::$assets;
 
     foreach ($assets as $asset) {
-      if ($asset['type'] === 'script') {
+      if ($asset['type'] === 'script' && $asset['rel'] === 'main') {
         return $asset['file'];
       }
     }
